@@ -211,3 +211,5 @@ __marimo__/
 *.sock
 *.log
 
+compiles_all_codes_to_one_script.py
+single_script_for_llm.txt
