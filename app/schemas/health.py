@@ -9,3 +9,4 @@ class ServiceMeta(BaseModel):
     summary: str
     version: str
     docs_path: str
+    mcp_path: str | None  # None when the MCP server is turned off

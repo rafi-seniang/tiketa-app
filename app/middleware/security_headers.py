@@ -4,7 +4,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
 
-PRIVATE_PATHS = ("/v1", "/auth")  # names and bookings
+PRIVATE_PATHS = ("/v1", "/auth", "/mcp")  # names and bookings
 YEAR_SECONDS = 31_536_000
 
 

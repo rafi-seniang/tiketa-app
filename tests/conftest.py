@@ -5,12 +5,15 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
+from fastmcp import Client, FastMCP
+from pydantic import SecretStr
 
 from app.core.application import create_app
 from app.core.database import Base, Sessions, connect_database
 from app.core.dependencies import get_now, get_resources
 from app.core.lifespan import Resources, build_resources
 from app.core.signing import Signer
+from app.mcp.server import build_mcp_server
 from app.middleware.rate_limit import InMemoryRateLimiter, key_id
 from app.repositories.cinema import CinemaStore
 from app.schemas.cinema import Showtime
@@ -70,3 +73,19 @@ async def client(settings: Settings, resources: Resources) -> AsyncIterator[http
         transport=transport, base_url="http://test", headers={"X-API-Key": "test-key-0001"}
     ) as http:
         yield http
+
+
+def keyless(settings: Settings) -> Settings:
+    """The settings of a local run without API keys, where every MCP call is the local caller."""
+    return settings.model_copy(update={"api_keys": SecretStr("")})
+
+
+@pytest.fixture
+def mcp_server(resources: Resources, settings: Settings) -> FastMCP:
+    return build_mcp_server(lambda: resources, lambda: NOW, keyless(settings))
+
+
+@pytest.fixture
+async def mcp(mcp_server: FastMCP) -> AsyncIterator[Client]:
+    async with Client(mcp_server) as mcp_client:
+        yield mcp_client

@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     environment: Literal["local", "test", "staging", "production"] = "local"
     log_level: str = "INFO"
 
-    # Comma-separated keys accepted in the X-API-Key header. Empty disables auth (local only)
+    # Comma-separated keys for servers and MCP clients (X-API-Key, or a bearer token on /mcp). Empty disables auth
     api_keys: SecretStr = SecretStr("")
     # Signs guest session cookies and booking confirmations (HMAC-SHA256). Empty means a random one per process
     session_secret: SecretStr = SecretStr("")
@@ -32,14 +32,17 @@ class Settings(BaseSettings):
     # Showtimes are stored in UTC and shown, and understood, in this timezone. A week runs Monday to Sunday in it
     cinema_timezone: str = "Asia/Jakarta"
     max_seats_per_booking: int = Field(default=8, gt=0)
-    # How long a prepared booking may wait for its confirmation
+    # How long a prepared booking (the MCP tools' two steps) may wait for its confirmation
     booking_confirmation_minutes: int = Field(default=10, gt=0)
 
     # Redis for the shared rate limit. Empty counts per process: local only
     redis_url: SecretStr = SecretStr("")
     redis_timeout_seconds: float = Field(default=2, gt=0)
-    # Requests per caller (API key, guest, or client address without either) per minute on /v1
+    # Requests per caller (API key, guest, or client address without either) per minute on /v1 and /mcp
     rate_limit_per_minute: int = Field(default=60, gt=0)
+
+    # Serves the booking tools to MCP clients at /mcp. Off leaves the API and the web app as they are
+    mcp_enabled: bool = True
 
     @model_validator(mode="after")
     def production_needs_secrets(self) -> "Settings":
