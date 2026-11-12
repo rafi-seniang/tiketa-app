@@ -1,119 +1,138 @@
-# Tiketa - Movie Ticket Booking App
+# Tiketa
 
-A modular web application for booking movie tickets built with Python, Flask, PostgreSQL, and Flask-SQLAlchemy.
+Cinema booking for a Jakarta cinema: a booking API that owns films, a week of showtimes, seats and bookings, a web
+app with a seat map, and an MCP server so assistants such as Claude can book too. A LangGraph chat agent plugs in as
+a separate service.
 
-## Features
+The booking service is the product. The two AI entry points are add-ons on the same API and the same rules, and
+either can be off without anything else noticing.
 
-- **Movie Listings**: Browse available movies with descriptions
-- **Showtime Management**: Lihat Jadwal for each movie
-- **Ticket Booking**: Book tickets with seat selection
-- **Database Integration**: PostgreSQL support with SQLite fallback
-- **Modular Architecture**: Built using Flask's Application Factory Pattern and Blueprints
+    web app (React)  ─────────────►  booking API (FastAPI)  ──►  PostgreSQL
+                                        ▲          ▲              films, showtimes, seats, bookings
+    chat agent (LangGraph, add-on) ─────┘          │
+      github.com/rafi-seniang/tiketa-booking-agent │
+    MCP clients (Claude, Cursor) ──► /mcp (FastMCP, add-on, same process)
 
-## Architecture
+| Piece | Where | Off means |
+|---|---|---|
+| Booking API | this repository, `app/` | nothing works: it must be up |
+| Web app | this repository, `web/` | the API and the add-ons still work |
+| MCP server | this repository, `app/mcp/`, at `/mcp` | `MCP_ENABLED=false`. The API and web app are unchanged |
+| Chat agent | [tiketa-booking-agent](https://github.com/rafi-seniang/tiketa-booking-agent) | the web app shows the chat as Off. The seat map books as before |
 
-The application follows the **Application Factory Pattern** with **Blueprints** for modular structure:
+v1 (tag `v1.0`, 2025) was a Flask app with server-rendered pages. This is v2.
 
-```
-tiketa-app/
-├── app/
-│   ├── __init__.py         # Application factory
-│   ├── models.py           # Database models
-│   └── movies/             # Movies blueprint
-│       ├── __init__.py
-│       └── routes.py       # Movie routes
-├── templates/
-│   └── movies/             # Movie templates
-│       ├── index.html      # Movie listings
-│       ├── detail.html     # Movie details & showtimes
-│       └── book.html       # Ticket booking
-├── requirements.txt        # Dependencies
-├── run.py                 # Application entry point
-└── .env.example          # Environment configuration template
-```
+## What holds, whoever books
 
-## Database Models
+| Rule | How |
+|---|---|
+| A seat is sold once per showtime | `UNIQUE (showtime_id, seat_id)` in PostgreSQL. The database refuses a second row, not the code |
+| A booking is all its seats or none | One transaction per booking |
+| A retried request books once | An `Idempotency-Key` per request, unique per caller and channel |
+| The price is the service's | Totals come from the showtime's price in the database, never from a client or a model |
+| A started showtime cannot be booked | Checked against the service's clock |
+| At most 8 seats per booking | `MAX_SEATS_PER_BOOKING`, enforced in the controller every channel goes through |
+| A booking belongs to its caller | Browsers get a signed `HttpOnly` guest cookie, servers and MCP clients an API key. A caller sees only its own |
+| Every channel is recorded | Each booking says `web`, `chat` or `mcp` |
 
-- **Movie**: Stores movie information (title, description)
-- **Showtime**: Links movies to specific show times
-- **Booking**: Records user bookings with seat assignments
+## The week on sale
 
-## Installation & Setup
+Showtimes are published one week at a time, Monday to Sunday in cinema time (Asia/Jakarta). The web app shows that
+week, with the days already past closed.
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd tiketa-app
-   ```
+    python scripts/publish_week.py              # this week. Safe to run again: it adds only what is missing
+    python scripts/publish_week.py --day 2026-11-16
 
-2. **Create virtual environment**:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+Run it every Monday, by hand or from cron (`scripts/cron/publish_week.cron`, which nothing installs for you).
+Publishing is its own step and never a side effect of a request.
 
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+Nothing is deleted. A new week adds showtimes, and past weeks stay in the database with their bookings, each with
+its time, channel and owner, for later study.
 
-4. **Configure environment variables**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database configuration
-   ```
+## The MCP server
 
-5. **Set up database**:
-   - For PostgreSQL: Set `DATABASE_URL=postgresql://username:password@localhost/database_name`
-   - For SQLite (default): `DATABASE_URL=sqlite:///tiketa.db`
+A [FastMCP](https://gofastmcp.com) 4 server mounted in the API at `/mcp`, on the stateless MCP protocol of
+28 July 2026 with plain JSON answers, so any worker can take any call. The tools are written for a model, not
+generated from the REST routes, and call the same controllers as the HTTP API. The client's own model is the agent:
+no model runs on this side.
 
-6. **Run the application**:
-   ```bash
-   python run.py
-   ```
+| Tool | What |
+|---|---|
+| `get_cinema` | The cinema's current date and time, the seat limit and the week on sale |
+| `list_films` | Every film showing |
+| `find_showtimes` | One day's showtimes that have not started, with price and seats left |
+| `get_seat_map` | A showtime's seats as text, taken ones marked |
+| `prepare_booking` | Checks a booking and returns its summary, total and a confirmation id. Nothing is booked or held |
+| `confirm_booking` | Books a prepared booking. Calling it twice with the same id books once |
+| `list_my_bookings` | The caller's latest bookings |
 
-The application will be available at `http://localhost:5000`
+Booking takes two calls so a person can read the price before anything is booked. The confirmation id is the
+prepared booking itself, signed by the service and valid for 10 minutes: nothing is stored, and the seats are checked
+again at confirmation. Read tools carry `readOnlyHint`, so a client can ask before `confirm_booking` only.
 
-## Database Configuration
+Try it with the API running:
 
-The application uses the `DATABASE_URL` environment variable for database connection:
+    claude mcp add --transport http tiketa http://127.0.0.1:8070/mcp/     # Claude Code
+    npx @modelcontextprotocol/inspector                                    # then connect to the same URL
 
-- **PostgreSQL**: `postgresql://username:password@host:port/database`
-- **SQLite**: `sqlite:///path/to/database.db` (default fallback)
+With `API_KEYS` set, clients send a key as a bearer token and are limited per minute like any other caller.
+OAuth for MCP clients is not implemented.
 
-## Routes
+## Run
 
-- `/` - List all available movies (main route)
-- `/movie/<id>` - View movie details and showtimes
-- `/book/<showtime_id>` - Book tickets for a specific showtime
+Needs Python 3.12, Node 24 and Docker.
 
-## Sample Data
+    python -m venv .venv && .venv/Scripts/pip install -e ".[dev]"     # .venv/bin on Linux and macOS
+    cp .env.example .env
+    docker compose up -d                          # Postgres :5434, Redis :6384, on 127.0.0.1 only
+    alembic upgrade head                          # the schema. The service refuses to start on an older one
+    PYTHONPATH=. python scripts/publish_week.py   # 21 films and this week's showtimes
+    python main.py                                # http://127.0.0.1:8070/docs
 
-The application automatically creates sample movies and showtimes on first run:
-- The Dark Knight
-- Inception  
-- Pulp Fiction
+    cd web && npm ci && npm run dev               # http://localhost:5174
 
-Each movie has 3 sample showtimes for testing.
+Without Docker, set `DATABASE_URL=sqlite+aiosqlite:///./tiketa.db` and an empty `REDIS_URL`. On Windows, use
+`127.0.0.1` rather than `localhost` in the service's own URLs (`localhost` tries IPv6 first and stalls). Open the web
+app on `localhost`, the host its API addresses use, so the guest cookie reaches the API and the chat agent alike.
 
-## Development
+    make check                    # ruff, mypy strict, 44 tests on SQLite: no services
+    cd web && npm run lint && npm test && npm run build
 
-To run in development mode:
-```bash
-export FLASK_DEBUG=true
-python run.py
-```
+## API
 
-## Technologies Used
+| Method and path | What |
+|---|---|
+| `GET /v1/cinema` | Name, clock, seat limit, and the week on sale with whether it is published |
+| `GET /v1/movies`, `GET /v1/movies/{id}` | Films |
+| `GET /v1/showtimes?day=&movie_id=`, `GET /v1/showtimes/{id}` | Showtimes that have not started, with seats left |
+| `GET /v1/showtimes/{id}/seats` | The seat map: rows, taken seats, the aisle and the walkway |
+| `POST /v1/bookings` | Book `showtime_id`, `seats`, `customer_name` with an `Idempotency-Key` header |
+| `GET /v1/bookings` | The caller's latest bookings, newest first, each with its channel |
+| `GET /v1/me` | How the service names the caller. The chat agent asks this |
+| `POST /auth/guest` | Sets the guest session cookie, for browsers, which never get an API key |
+| `/mcp` | The MCP server |
+| `GET /health`, `GET /meta` | Liveness, and what the service is |
 
-- **Python 3.12+**
-- **Flask 3.0.0** - Web framework
-- **Flask-SQLAlchemy 3.1.1** - Database ORM
-- **PostgreSQL** - Primary database
-- **SQLite** - Development/fallback database
-- **HTML/CSS/JavaScript** - Frontend
-- **python-dotenv** - Environment configuration
+Errors are RFC 9457 problem details with a request id. `/v1` needs `X-API-Key` or the guest cookie once `API_KEYS`
+is set. Threats and answers are in [SECURITY.md](SECURITY.md), decisions in
+[docs/adr/0001-booking-core-with-add-ons.md](docs/adr/0001-booking-core-with-add-ons.md).
 
-## License
+## Layout
 
-MIT License - see LICENSE file for details.
+    main.py                     entry point: uvicorn on the app from app/core/application.py
+    app/settings.py             every environment value, typed (pydantic-settings)
+    app/core/                   app factory, lifespan (everything built once at startup), database, Redis, signing,
+                                errors, logging, dependencies
+    app/middleware/             request id and access log, CORS, guest sessions and API keys, the Redis rate limit
+    app/routes/                 one APIRouter per area: catalog, bookings, auth, health
+    app/controllers/            what every channel goes through: catalog and bookings
+    app/services/               the weekly schedule, and a booking prepared now and confirmed later
+    app/mcp/                    the MCP server and its tools
+    app/repositories/           every query (the cinema store) and the film list
+    app/models/                 SQLAlchemy tables
+    app/schemas/                Pydantic models
+    app/utils/                  pure helpers: the cinema clock and week, the seat layout
+    scripts/                    publish_week.py and its cron line
+    migrations/                 Alembic
+    tests/                      the store, the API, the week, the MCP server over memory and HTTP, the migrations
+    web/                        the React web app: seat map, booking form, the chat panel for the agent
