@@ -213,3 +213,14 @@ __marimo__/
 
 compiles_all_codes_to_one_script.py
 single_script_for_llm.txt
+
+# Tiketa
+.env.*
+!.env.example
+tiketa.db
+node_modules/
+.taste-skill/
+CLAUDE.md
+AGENTS.md
+.claude/
+.agents/
