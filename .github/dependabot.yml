@@ -20,3 +20,15 @@ updates:
       interval: weekly
     cooldown:
       default-days: 14
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+  - package-ecosystem: docker
+    directory: /web
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14

@@ -21,6 +21,25 @@ jobs:
       # known vulnerabilities in any dependency fail the build
       - run: pip-audit --skip-editable
 
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      # a known high or critical vulnerability in any dependency fails the build
+      - run: npm audit --audit-level=high
+
   secrets:
     runs-on: ubuntu-latest
     steps:
@@ -32,8 +51,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   image:
-    needs: api
+    needs: [api, web]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t tiketa:${{ github.sha }} .
+      - run: docker build -t tiketa-web:${{ github.sha }} web
