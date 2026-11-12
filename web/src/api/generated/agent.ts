@@ -1,4 +1,4 @@
-/** Generated from the backend's OpenAPI schema by scripts/generate-api-types.mjs. Do not edit. */
+/** Generated from the service's OpenAPI schema by scripts/generate-api-types.mjs. Do not edit. */
 export interface paths {
   "/health": {
     parameters: {
@@ -28,26 +28,6 @@ export interface paths {
     get: operations["meta_meta_get"];
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/auth/guest": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Start Guest Session
-     * @description Sets a signed guest session cookie, or keeps the one the browser already has while it is valid.
-     */
-    post: operations["start_guest_session_auth_guest_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -131,89 +111,11 @@ export interface paths {
     };
     /**
      * Token Usage
-     * @description The caller's model tokens today against the daily budget. The booking form spends none.
+     * @description The caller's model tokens today against the daily budget.
      */
     get: operations["token_usage_v1_usage_get"];
     put?: never;
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/v1/movies": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** List Movies */
-    get: operations["list_movies_v1_movies_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/v1/showtimes": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * List Showtimes
-     * @description Showtimes on a cinema-local day that have not started yet.
-     */
-    get: operations["list_showtimes_v1_showtimes_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/v1/showtimes/{showtime_id}/seats": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Seat Map */
-    get: operations["seat_map_v1_showtimes__showtime_id__seats_get"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/v1/bookings": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * My Bookings
-     * @description The caller's latest bookings, from the form and the chat, newest first.
-     */
-    get: operations["my_bookings_v1_bookings_get"];
-    put?: never;
-    /**
-     * Book
-     * @description Books every seat or none. A retried request with the same Idempotency-Key gets the first booking back.
-     */
-    post: operations["book_v1_bookings_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -232,7 +134,7 @@ export interface components {
        * Channel
        * @enum {string}
        */
-      channel: "chat" | "web";
+      channel: "web" | "chat" | "mcp";
       showtime: components["schemas"]["Showtime"];
       /** Seats */
       seats: string[];
@@ -245,18 +147,6 @@ export interface components {
        * Format: date-time
        */
       created_at: string;
-    };
-    /**
-     * BookingForm
-     * @description What the booking form sends. The owner and channel come from the server.
-     */
-    BookingForm: {
-      /** Showtime Id */
-      showtime_id: number;
-      /** Seats */
-      seats: string[];
-      /** Customer Name */
-      customer_name: string;
     };
     /**
      * BookingSummary
@@ -306,62 +196,7 @@ export interface components {
        */
       message: string;
     };
-    /** Movie */
-    Movie: {
-      /** Id */
-      id: number;
-      /** Title */
-      title: string;
-      /** Synopsis */
-      synopsis: string;
-      /** Release Year */
-      release_year: number;
-      /** Genres */
-      genres: string[];
-      /** Studio Number */
-      studio_number: number;
-      /** Poster Url */
-      poster_url: string | null;
-      /** Trailer Youtube Id */
-      trailer_youtube_id: string | null;
-    };
-    /**
-     * SeatMap
-     * @description For a UI: rows front to back, and where the aisle and the walkway fall, so a UI draws the real room.
-     */
-    SeatMap: {
-      showtime: components["schemas"]["Showtime"];
-      /** Rows */
-      rows: components["schemas"]["SeatRowView"][];
-      /**
-       * Aisle After Seat
-       * @default 9
-       */
-      aisle_after_seat: number;
-      /**
-       * Walkway Before Row
-       * @default L
-       */
-      walkway_before_row: string;
-    };
-    /** SeatRowView */
-    SeatRowView: {
-      /** Row */
-      row: string;
-      /** Seats */
-      seats: components["schemas"]["SeatView"][];
-    };
-    /** SeatView */
-    SeatView: {
-      /** Id */
-      id: string;
-      /** Is Taken */
-      is_taken: boolean;
-    };
-    /**
-     * ServiceMeta
-     * @description What the lab frontend's lobby shows about this backend (the Lab backend contract).
-     */
+    /** ServiceMeta */
     ServiceMeta: {
       /** Id */
       id: string;
@@ -412,6 +247,8 @@ export interface components {
        * Format: date-time
        */
       starts_at: string;
+      /** Starts At Local */
+      starts_at_local: string;
       /** Price Idr */
       price_idr: number;
       /** Seats Left */
@@ -497,24 +334,6 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["ServiceMeta"];
         };
-      };
-    };
-  };
-  start_guest_session_auth_guest_post: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
       };
     };
   };
@@ -655,144 +474,6 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["TokenUsageView"];
-        };
-      };
-    };
-  };
-  list_movies_v1_movies_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Movie"][];
-        };
-      };
-    };
-  };
-  list_showtimes_v1_showtimes_get: {
-    parameters: {
-      query: {
-        day: string;
-        movie_id?: number | null;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Showtime"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  seat_map_v1_showtimes__showtime_id__seats_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        showtime_id: number;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["SeatMap"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
-        };
-      };
-    };
-  };
-  my_bookings_v1_bookings_get: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Booking"][];
-        };
-      };
-    };
-  };
-  book_v1_bookings_post: {
-    parameters: {
-      query?: never;
-      header: {
-        "idempotency-key": string;
-      };
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["BookingForm"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Booking"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
