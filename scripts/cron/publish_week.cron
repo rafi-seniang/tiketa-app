@@ -1,0 +1,4 @@
+# Publishes the new week's showtimes every Monday at 00:05 in cinema time. Not installed by anything:
+# copy it to /etc/cron.d/tiketa-week on the server once the service runs there, and set the path and user.
+CRON_TZ=Asia/Jakarta
+5 0 * * 1 tiketa cd /srv/tiketa && .venv/bin/python scripts/publish_week.py >> /var/log/tiketa-week.log 2>&1
