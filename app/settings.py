@@ -21,8 +21,14 @@ class Settings(BaseSettings):
     # The parent domain the guest cookie is set for, so the chat agent on a sibling subdomain receives it too.
     # Empty keeps the cookie on this host only, which is right for localhost
     guest_cookie_domain: str = ""
-    # Browser origins allowed to call the API (the web app in development and preview)
-    cors_origins: list[str] = ["http://localhost:5174", "http://localhost:4174"]
+    # Browser origins allowed to call the API: the web app in development and preview (5174, 4174), and the AI Lab's
+    # lobby (5173, 4173), which reads /health to show this service On or Off
+    cors_origins: list[str] = [
+        "http://localhost:5174",
+        "http://localhost:4174",
+        "http://localhost:5173",
+        "http://localhost:4173",
+    ]
 
     # SQLAlchemy URL of the cinema database. postgresql+psycopg://... for real use,
     # sqlite+aiosqlite:///./tiketa.db for a quick local run
