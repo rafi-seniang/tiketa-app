@@ -3,6 +3,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import { agent, type BookingSummary, isAgentAnswering } from "../api/agent";
 import {
   type Booking,
+  CORE_URL,
   core,
   type Movie,
   type SeatMap as SeatMapData,
@@ -11,6 +12,7 @@ import {
   unwrap,
 } from "../api/core";
 import { AppShell } from "../shell/AppShell";
+import { AssistantSetup } from "./AssistantSetup";
 import { type AgentStatus, ChatPanel } from "./ChatPanel";
 import { FilmRail } from "./FilmRail";
 import { cinemaDay, clockTime, posterAt, rupiah, weekDays, whenLabel } from "./format";
@@ -27,6 +29,7 @@ const NAME_KEY = "tiketa.name";
 
 const keys = {
   cinema: ["tiketa", "cinema"] as const,
+  meta: ["tiketa", "meta"] as const,
   agent: ["tiketa", "agent"] as const,
   movies: ["tiketa", "movies"] as const,
   showtimes: (day: string) => ["tiketa", "showtimes", day] as const,
@@ -172,6 +175,12 @@ type Notice = { kind: "booked"; booking: Booking } | { kind: "refused"; text: st
 export function TiketaBooking() {
   const queryClient = useQueryClient();
   const cinema = useQuery({ queryKey: keys.cinema, queryFn: async () => unwrap(await core.GET("/v1/cinema")) });
+  const meta = useQuery({
+    queryKey: keys.meta,
+    queryFn: async () => unwrap(await core.GET("/meta")),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const mcpPath = meta.data?.mcp_path; // null while the API runs with its MCP server off
   const days = useMemo(() => (cinema.data ? weekDays(cinema.data.week) : []), [cinema.data]);
   const maxSeats = cinema.data?.max_seats_per_booking ?? MAX_SEATS_UNTIL_KNOWN;
   const [chosenDay, setDay] = useState<string | null>(null);
@@ -369,20 +378,27 @@ export function TiketaBooking() {
       mark={<Mark size={20} />}
       scope={{ line: cinema.data?.name ?? "Tiketa Cinema", detail: "Jakarta, times in WIB" }}
       sidebar={
-        <dl className="facts">
-          <div>
-            <dt>This week</dt>
-            <dd>{days.length > 0 ? `${days[0]?.date} to ${days.at(-1)?.date}` : "-"}</dd>
-          </div>
-          <div>
-            <dt>Seat map</dt>
-            <dd>{cinema.isError ? "Off" : "On"}</dd>
-          </div>
-          <div>
-            <dt>Chat agent</dt>
-            <dd>{agentStatus === "checking" ? "Checking" : agentStatus === "on" ? "On" : "Off"}</dd>
-          </div>
-        </dl>
+        <>
+          <dl className="facts">
+            <div>
+              <dt>This week</dt>
+              <dd>{days.length > 0 ? `${days[0]?.date} to ${days.at(-1)?.date}` : "-"}</dd>
+            </div>
+            <div>
+              <dt>Seat map</dt>
+              <dd>{cinema.isError ? "Off" : "On"}</dd>
+            </div>
+            <div>
+              <dt>Chat agent</dt>
+              <dd>{agentStatus === "checking" ? "Checking" : agentStatus === "on" ? "On" : "Off"}</dd>
+            </div>
+            <div>
+              <dt>MCP server</dt>
+              <dd>{meta.data ? (mcpPath ? "On" : "Off") : "-"}</dd>
+            </div>
+          </dl>
+          {mcpPath && <AssistantSetup mcpUrl={`${CORE_URL}${mcpPath}/`} />}
+        </>
       }
       sidebarFooter={<CinemaPhoto />}
       className="tiketa"

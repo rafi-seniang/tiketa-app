@@ -18,6 +18,14 @@ const CINEMA = {
   max_seats_per_booking: 8,
   week: WEEK,
 };
+const META = {
+  id: "tiketa",
+  name: "Tiketa",
+  summary: "Cinema booking",
+  version: "2.0.0",
+  docs_path: "/docs",
+  mcp_path: "/mcp",
+};
 const SHOWTIME = {
   id: 117,
   movie_id: 9,
@@ -110,6 +118,7 @@ function serve(handle: (call: Sent) => Response | undefined, agentIsOn = true) {
       } else {
         if (call.path === "/auth/guest") return new Response(null, { status: 204 });
         if (call.path === "/v1/cinema") return json(CINEMA);
+        if (call.path === "/meta") return json(META);
         if (call.path === "/v1/movies") return json([MOVIE]);
         if (call.path === "/v1/showtimes") return json([SHOWTIME]);
         if (call.path === "/v1/showtimes/117/seats") return json(SEATS);
@@ -240,4 +249,17 @@ test("with the agent off the chat says so and the form still books", async () =>
   await userEvent.click(screen.getByRole("button", { name: "Book 1 seat" }));
   expect(await screen.findByText(/Booked/)).toHaveTextContent("Booked TKFORM0002");
   expect(sent.some((call) => call.service === "agent" && call.path.startsWith("/v1"))).toBe(false);
+});
+
+test("a visitor copies the instructions that connect their own assistant to the MCP server", async () => {
+  serve((call) => (call.path === "/v1/bookings" ? json([]) : undefined));
+  const user = userEvent.setup(); // gives the page a clipboard
+  renderScreen();
+
+  await user.click(await screen.findByRole("button", { name: "Copy setup instructions" }));
+  expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+  const copied = await navigator.clipboard.readText();
+  expect(copied).toContain("MCP server URL: http://localhost:8070/mcp/");
+  expect(copied).toContain("claude mcp add --transport http tiketa http://localhost:8070/mcp/");
+  expect(copied).toContain("this address is on my own computer");
 });
