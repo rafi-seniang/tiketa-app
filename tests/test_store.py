@@ -1,3 +1,4 @@
+import asyncio
 from datetime import timedelta
 
 import pytest
@@ -40,6 +41,27 @@ async def test_a_seat_is_sold_once_and_a_failed_booking_takes_nothing(
     with pytest.raises(Conflict, match="D9"):
         await store.book(request(evening.id, ["D10", "D9"], key="second", session_id="s2"), NOW)
     assert await store.taken_seat_ids(evening.id) == {"D9"}  # D10 was not kept from the refused booking
+
+
+async def test_people_booking_one_seat_at_the_same_moment_get_it_once(
+    store: CinemaStore, dune_today: list[Showtime]
+) -> None:
+    evening = dune_today[2]
+    attempts = [store.book(request(evening.id, ["D9"], key=f"person-{n}", session_id=f"s{n}"), NOW) for n in range(12)]
+    outcomes = await asyncio.gather(*attempts, return_exceptions=True)
+    refused = [outcome for outcome in outcomes if isinstance(outcome, Conflict)]
+    assert len(refused) == len(outcomes) - 1 == 11
+    assert await store.taken_seat_ids(evening.id) == {"D9"}
+    assert (await store.get_showtime(evening.id)).seats_left == SEATS_PER_SHOWTIME - 1
+
+
+async def test_one_request_sent_twice_at_the_same_moment_books_once(
+    store: CinemaStore, dune_today: list[Showtime]
+) -> None:
+    sent_twice = [store.book(request(dune_today[2].id, ["E5", "E6"]), NOW) for _ in range(2)]
+    first, second = await asyncio.gather(*sent_twice)
+    assert first.code == second.code
+    assert len(await store.bookings_for_owner("key:key-0001", 20)) == 1
 
 
 async def test_the_same_tool_call_books_once(store: CinemaStore, dune_today: list[Showtime]) -> None:

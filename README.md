@@ -26,7 +26,7 @@ v1 (tag `v1.0`, 2025) was a Flask app with server-rendered pages. This is v2.
 
 | Rule | How |
 |---|---|
-| A seat is sold once per showtime | `UNIQUE (showtime_id, seat_id)` in PostgreSQL. The database refuses a second row, not the code |
+| A seat is sold once per showtime | `UNIQUE (showtime_id, seat_id)` in PostgreSQL. The database refuses a second row, not the code. A test sends twelve bookings for one seat at the same moment and one gets it, on SQLite and on PostgreSQL |
 | A booking is all its seats or none | One transaction per booking |
 | A retried request books once | An `Idempotency-Key` per request, unique per caller and channel |
 | The price is the service's | Totals come from the showtime's price in the database, never from a client or a model |
@@ -101,7 +101,8 @@ Without Docker, set `DATABASE_URL=sqlite+aiosqlite:///./tiketa.db` and an empty 
 `127.0.0.1` rather than `localhost` in the service's own URLs (`localhost` tries IPv6 first and stalls). Open the web
 app on `localhost`, the host its API addresses use, so the guest cookie reaches the API and the chat agent alike.
 
-    make check                    # ruff, mypy strict, 44 tests on SQLite: no services
+    make check                    # ruff, mypy strict, 46 tests on SQLite with no services, 90% coverage floor
+    make test-postgres            # the same tests on PostgreSQL, as CI also runs them
     cd web && npm run lint && npm test && npm run build
 
 ## API
