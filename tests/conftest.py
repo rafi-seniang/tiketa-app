@@ -1,6 +1,10 @@
+import asyncio
+import os
+import sys
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -27,14 +31,24 @@ OWNER = key_id("test-key-0001")  # the caller the test client's API key stands f
 DUNE = 9  # the film id of Dune: Part Two, shown at 12:30, 15:15, 18:00 and 20:45
 
 
+def pytest_asyncio_loop_factories(config: pytest.Config, item: pytest.Item) -> dict[str, Any]:
+    """psycopg's async mode needs a selector loop, which is not the default on Windows."""
+    return {"selector": asyncio.SelectorEventLoop} if sys.platform == "win32" else {"default": asyncio.new_event_loop}
+
+
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
-    """A test module can override this fixture to change a setting."""
+    """A test module can override this fixture to change a setting.
+
+    SQLite in a temporary file by default. TEST_DATABASE_URL runs the same tests on that database instead, an empty
+    PostgreSQL one in CI, because the rule that a seat is sold once is kept by the database.
+    """
     return Settings(  # type: ignore[call-arg]
         _env_file=None,
         environment="test",
         api_keys="test-key-0001,other-key-0002",
-        database_url=f"sqlite+aiosqlite:///{(tmp_path / 'tiketa.db').as_posix()}",
+        database_url=os.environ.get("TEST_DATABASE_URL")
+        or f"sqlite+aiosqlite:///{(tmp_path / 'tiketa.db').as_posix()}",
     )
 
 
@@ -45,6 +59,8 @@ async def sessions(settings: Settings) -> AsyncIterator[Sessions]:
         await connection.run_sync(Base.metadata.create_all)
     await publish_week(session_factory, TODAY, CINEMA_TIMEZONE)
     yield session_factory
+    async with engine.begin() as connection:  # a shared test database starts empty for the next test
+        await connection.run_sync(Base.metadata.drop_all)
     await engine.dispose()
 
 
