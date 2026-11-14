@@ -78,6 +78,12 @@ Try it with the API running:
 With `API_KEYS` set, clients send a key as a bearer token and are limited per minute like any other caller.
 OAuth for MCP clients is not implemented.
 
+The web app's side panel has "Copy setup instructions": English text a visitor pastes into their own assistant. It
+gives the server's URL and the steps for Claude Code, editors that read an MCP configuration, Claude and ChatGPT, and
+says when the address is on the visitor's own computer, which Claude and ChatGPT cannot reach because they connect
+from their own servers. The visitor can read the text before copying it. The panel shows it only while `/meta`
+reports the MCP server on.
+
 ## Run
 
 Needs Python 3.12, Node 24 and Docker.
