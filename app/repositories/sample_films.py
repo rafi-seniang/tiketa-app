@@ -47,7 +47,7 @@ SAMPLE_MOVIES: list[dict[str, Any]] = [
         "release_year": 2024,
         "genres": ["Animation", "Action", "Drama"],
         "studio_number": 5,
-        "poster_url": None,
+        "poster_url": f"{TMDB}/wgwldDDlTDDMrluOMkpSA8lyKjv.jpg",
         "trailer_youtube_id": None,
     },
     {
