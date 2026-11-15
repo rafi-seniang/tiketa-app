@@ -1,9 +1,8 @@
-"""Pure-Python PNG and SVG studio seat map renderers for visual MCP tool responses."""
+"""A studio seat map as a PNG, drawn in pure Python for the MCP tools: free, taken and chosen seats."""
 
 import struct
 import zlib
 from dataclasses import dataclass
-from html import escape
 
 from app.utils.seat_layout import AISLE_AFTER_SEAT, WALKWAY_BEFORE_ROW, seat_rows
 
@@ -110,10 +109,6 @@ class _Layout:
     seats: list[_SeatBox]
     rows: list[_RowLabelPos]
     footer_y: int
-
-
-def _hex(color: Color) -> str:
-    return f"#{color[0]:02x}{color[1]:02x}{color[2]:02x}"
 
 
 def _build_layout(taken_seat_ids: set[str], chosen_seat_ids: set[str] | None) -> _Layout:
@@ -238,8 +233,9 @@ def render_seat_map_png(
     taken_seat_ids: set[str],
     chosen_seat_ids: set[str] | None = None,
     *,
-    title: str = "Studio Seat Map",
-    subtitle: str = "",
+    title: str,
+    subtitle: str,
+    as_of: str,
 ) -> bytes:
     """Render the cinema seat map as an RGB PNG image with Free, Taken, and Chosen seats."""
     layout = _build_layout(taken_seat_ids, chosen_seat_ids)
@@ -290,64 +286,8 @@ def render_seat_map_png(
         canvas.stroke_rect(lx, layout.footer_y + 2, 14, 14, fill, border)
         canvas.draw_text(lx + 20, layout.footer_y + 6, label, _MUTED, scale=1)
         lx += 34 + canvas.text_width(label)
+    # Seats change, so the picture says when it was drawn
+    stamp = f"SEATS AS OF {as_of}"
+    canvas.draw_text(layout.width - _PAD_X - canvas.text_width(stamp), layout.footer_y + 6, stamp, _MUTED, scale=1)
 
     return canvas.encode_png()
-
-
-def render_seat_map_svg(
-    taken_seat_ids: set[str],
-    chosen_seat_ids: set[str] | None = None,
-    *,
-    title: str = "Studio Seat Map",
-    subtitle: str = "",
-) -> str:
-    """Render the cinema seat map as clean standalone SVG markup matching the PNG layout."""
-    layout = _build_layout(taken_seat_ids, chosen_seat_ids)
-    parts: list[str] = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {layout.width} {layout.height}" '
-        f'width="{layout.width}" height="{layout.height}" role="img" aria-label="{escape(title)}">',
-        f'<rect width="{layout.width}" height="{layout.height}" fill="{_hex(_BG)}"/>',
-        f'<text x="{_PAD_X}" y="{_PAD_Y + 14}" font-family="sans-serif" font-size="14" font-weight="600" '
-        f'fill="{_hex(_INK)}">{escape(title)}</text>',
-    ]
-    if subtitle:
-        parts.append(
-            f'<text x="{_PAD_X}" y="{_PAD_Y + 30}" font-family="sans-serif" font-size="11" '
-            f'fill="{_hex(_MUTED)}">{escape(subtitle)}</text>'
-        )
-    parts.append(
-        f'<rect x="{layout.screen_x}" y="{layout.screen_y}" width="{layout.screen_w}" height="6" rx="3" '
-        f'fill="{_hex(_SCREEN_FILL)}"/>'
-    )
-    parts.append(
-        f'<text x="{layout.screen_x + layout.screen_w // 2}" y="{layout.screen_y + 20}" '
-        f'text-anchor="middle" font-family="sans-serif" font-size="10" fill="{_hex(_MUTED)}">SCREEN (FRONT)</text>'
-    )
-    if layout.walkway_y is not None:
-        parts.append(
-            f'<text x="{layout.width // 2}" y="{layout.walkway_y + 7}" text-anchor="middle" '
-            f'font-family="sans-serif" font-size="10" fill="{_hex(_MUTED)}">WALKWAY</text>'
-        )
-    for row_pos in layout.rows:
-        cy = row_pos.y + _SEAT_H // 2 + 4
-        parts.append(
-            f'<text x="{_PAD_X + 10}" y="{cy}" text-anchor="middle" font-family="sans-serif" '
-            f'font-size="10" fill="{_hex(_MUTED)}">{row_pos.row}</text>'
-        )
-        parts.append(
-            f'<text x="{layout.width - _PAD_X - 10}" y="{cy}" text-anchor="middle" font-family="sans-serif" '
-            f'font-size="10" fill="{_hex(_MUTED)}">{row_pos.row}</text>'
-        )
-    for seat in layout.seats:
-        fill, border, text_color = _colors_for_state(seat.state)
-        label = "--" if seat.state == "taken" else seat.seat_id
-        parts.append(
-            f'<rect x="{seat.x}" y="{seat.y}" width="{_SEAT_W}" height="{_SEAT_H}" rx="4" '
-            f'fill="{_hex(fill)}" stroke="{_hex(border)}"/>'
-        )
-        parts.append(
-            f'<text x="{seat.x + _SEAT_W // 2}" y="{seat.y + _SEAT_H // 2 + 3}" text-anchor="middle" '
-            f'font-family="monospace" font-size="9" fill="{_hex(text_color)}">{label}</text>'
-        )
-    parts.append("</svg>")
-    return "".join(parts)

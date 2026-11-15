@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 from datetime import date, datetime
 from functools import wraps
 from typing import Annotated, Any
+from zoneinfo import ZoneInfo
 
 from fastmcp import FastMCP
 from fastmcp.dependencies import Depends
@@ -66,6 +67,12 @@ def build_mcp_server(
 ) -> FastMCP:
     # A public server asks for no key. Otherwise the API's keys are the bearer tokens
     verifier = None if settings.mcp_public else token_verifier(settings.api_key_list)
+    cinema_timezone = ZoneInfo(settings.cinema_timezone)
+
+    def clock_time(moment: datetime) -> str:
+        local = moment.astimezone(cinema_timezone)
+        return f"{local:%H:%M} {local.tzname()}"
+
     mcp = FastMCP(
         "Tiketa",
         instructions=INSTRUCTIONS,
@@ -120,6 +127,7 @@ def build_mcp_server(
             taken,
             title=showtime.movie_title,
             subtitle=f"{showtime.starts_at_local} - Studio {showtime.studio_number}",
+            as_of=clock_time(get_now()),
         )
         return ToolResult(content=[text, Image(data=png, format="png")])
 
@@ -140,6 +148,7 @@ def build_mcp_server(
             set(quote.summary.seats),
             title=quote.summary.movie_title,
             subtitle=f"{quote.summary.starts_at_local} - Studio {quote.summary.studio_number}",
+            as_of=clock_time(get_now()),
         )
         return ToolResult(content=[quote.model_dump_json(), Image(data=png, format="png")], structured_content=quote)
 
