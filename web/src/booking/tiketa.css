@@ -912,11 +912,6 @@ fieldset.tk-room {
 .tk-assistant-status:empty {
   display: none;
 }
-.tk-assistant summary {
-  color: var(--muted);
-  font-size: var(--fs-small);
-  cursor: pointer;
-}
 .tk-assistant pre {
   max-height: 260px;
   margin: 8px 0 0;

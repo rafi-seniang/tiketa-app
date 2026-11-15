@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { assistantSetupText } from "./setupInstructions";
 
-/** Lets a visitor copy the instructions that connect their own assistant to the MCP server, and read them first. */
+/** One sentence and one button: a visitor copies the instructions that connect their own assistant to the MCP server. */
 export function AssistantSetup({ mcpUrl }: { mcpUrl: string }) {
   const [copying, setCopying] = useState<"idle" | "copied" | "blocked">("idle");
   const text = assistantSetupText(mcpUrl);
@@ -17,19 +17,16 @@ export function AssistantSetup({ mcpUrl }: { mcpUrl: string }) {
 
   return (
     <section className="tk-assistant" aria-labelledby="tk-assistant-title">
-      <h2 id="tk-assistant-title">Book from your own assistant</h2>
-      <p>Claude, ChatGPT and coding agents can book here over MCP. Paste these instructions into yours.</p>
+      <h2 id="tk-assistant-title">Book with your own AI chatbot</h2>
+      <p>Copy the instructions and paste them into Claude or ChatGPT.</p>
       <button type="button" className="btn" onClick={() => void copy()}>
-        {copying === "copied" ? "Copied" : "Copy setup instructions"}
+        {copying === "copied" ? "Copied" : "Copy instructions"}
       </button>
       <p className="tk-assistant-status" role="status">
-        {copying === "copied" && "Now paste it into your assistant."}
+        {copying === "copied" && "Now paste it into your chatbot."}
         {copying === "blocked" && "The browser blocked copying. Select the text below."}
       </p>
-      <details open={copying === "blocked" || undefined}>
-        <summary>Read what is copied</summary>
-        <pre>{text}</pre>
-      </details>
+      {copying === "blocked" && <pre>{text}</pre>}
     </section>
   );
 }

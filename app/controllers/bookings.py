@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from app.core.errors import Conflict
+from app.core.errors import Conflict, NotFound
 from app.repositories.cinema import CinemaStore
 from app.schemas.cinema import Booking, BookingForm, BookingQuote, BookingRequest
 from app.services.booking_quotes import BookingQuotes
@@ -47,6 +47,13 @@ class BookingController:
     async def recent(self, caller: str, session_id: str | None = None) -> list[Booking]:
         """The caller's latest bookings from every channel, newest first, or only one conversation's."""
         return await self._store.bookings_for_owner(caller, RECENT_BOOKINGS, session_id)
+
+    async def by_code(self, booking_code: str, caller: str) -> Booking:
+        """One of the caller's bookings, by the code the customer was given."""
+        booking = await self._store.booking_with_code(booking_code, caller)
+        if booking is None:
+            raise NotFound("There is no booking with this code")
+        return booking
 
     def _refuse_too_many_seats(self, form: BookingForm) -> None:
         if len(form.seats) > self._max_seats:

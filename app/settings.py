@@ -49,6 +49,10 @@ class Settings(BaseSettings):
 
     # Serves the booking tools to MCP clients at /mcp. Off leaves the API and the web app as they are
     mcp_enabled: bool = True
+    # true: anyone may call /mcp with no key, so a visitor's own assistant can book. Every such caller is one
+    # anonymous caller with its own limit below, and a booking is read back only by its code
+    mcp_public: bool = False
+    mcp_public_rate_limit_per_minute: int = Field(default=300, gt=0)
 
     @model_validator(mode="after")
     def production_needs_secrets(self) -> "Settings":

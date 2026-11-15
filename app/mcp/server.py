@@ -28,9 +28,10 @@ INSTRUCTIONS = """Tiketa books cinema seats. Call get_cinema first: it gives the
 and the week on sale (Monday to Sunday), so dates such as "tomorrow" or "besok" can be worked out in cinema time.
 To book: find_showtimes, get_seat_map, then prepare_booking. Show the person the summary and its total, and call \
 confirm_booking only after they agree. Ids are for tools: name the film, day, time and studio to the person.
-Prices are per seat in rupiah. Payment is made at the cinema's counter with the booking code."""
+Prices are per seat in rupiah. Payment is made at the cinema's counter with the booking code. Give the person \
+that code: get_booking finds the booking again only by it."""
 
-LOCAL_CALLER = "mcp:local"  # when no API keys are set, which only a local run allows
+ANONYMOUS_CALLER = "mcp:anonymous"  # every caller without a key: a public server, or a local run with no keys
 READ_ONLY = {"readOnlyHint": True, "openWorldHint": False}
 BOOKS_ONCE = {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": False}
 
@@ -60,10 +61,12 @@ def refusals_as_tool_errors[**Arguments, Result](
 def build_mcp_server(
     get_resources: Callable[[], Resources], get_now: Callable[[], datetime], settings: Settings
 ) -> FastMCP:
+    # A public server asks for no key. Otherwise the API's keys are the bearer tokens
+    verifier = None if settings.mcp_public else token_verifier(settings.api_key_list)
     mcp = FastMCP(
         "Tiketa",
         instructions=INSTRUCTIONS,
-        auth=token_verifier(settings.api_key_list),
+        auth=verifier,
         mask_error_details=True,  # an unexpected error is logged here and not described to the client
     )
 
@@ -73,10 +76,12 @@ def build_mcp_server(
     async def caller() -> str:
         """Who is calling, counted against the same per-minute limit as the HTTP API."""
         token = get_access_token()
-        name = token.client_id if token is not None else LOCAL_CALLER
-        retry_after = await get_resources().rate_limiter.hit(name, settings.rate_limit_per_minute)
+        name = token.client_id if token is not None else ANONYMOUS_CALLER
+        # Anonymous callers share one name, so they share one larger limit
+        limit = settings.rate_limit_per_minute if token is not None else settings.mcp_public_rate_limit_per_minute
+        retry_after = await get_resources().rate_limiter.hit(name, limit)
         if retry_after is not None:
-            raise ToolError(f"Over {settings.rate_limit_per_minute} calls a minute. Try again in {retry_after} seconds")
+            raise ToolError(f"Over {limit} calls a minute. Try again in {retry_after} seconds")
         return name
 
     Caller = Annotated[str, Depends(caller)]
@@ -127,6 +132,17 @@ def build_mcp_server(
     ) -> Booking:
         """Books a prepared booking and returns its booking code. Call it only after the person agreed to it."""
         return await get_resources().bookings.confirm(confirmation_id, owner, get_now())
+
+    @tool(READ_ONLY)
+    async def get_booking(
+        owner: Caller,
+        booking_code: Annotated[str, Field(description="The code confirm_booking returned, such as TK1A2B3C4D")],
+    ) -> Booking:
+        """One booking, found by its booking code."""
+        return await get_resources().bookings.by_code(booking_code, owner)
+
+    if verifier is None:
+        return mcp  # callers without a key are one caller: a list would show them each other's names and codes
 
     @tool(READ_ONLY)
     async def list_my_bookings(owner: Caller) -> list[Booking]:
