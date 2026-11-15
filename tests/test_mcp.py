@@ -1,5 +1,6 @@
 """An MCP client books through the same rules as the form: a prepared booking first, then its confirmation."""
 
+import base64
 from datetime import timedelta
 from typing import Any
 
@@ -51,15 +52,25 @@ async def test_a_client_finds_the_week_a_showtime_and_its_seats(mcp: Client[Any]
     assert cinema["week"]["days"][0] == "2026-11-02" and cinema["week"]["is_published"] is True
     found = await mcp.call_tool("find_showtimes", {"day": TODAY.isoformat(), "film_id": 9})
     assert [showtime["id"] for showtime in found.structured_content["result"]] == [s.id for s in dune_today]
-    seat_map = (await mcp.call_tool("get_seat_map", {"showtime_id": dune_today[2].id})).content[0].text
+    seat_map_result = await mcp.call_tool("get_seat_map", {"showtime_id": dune_today[2].id})
+    seat_map = seat_map_result.content[0].text
     assert "18:00 WIB" in seat_map and "A9 | A10" in seat_map
+    assert len(seat_map_result.content) == 2
+    assert seat_map_result.content[1].mime_type == "image/png"
+    assert base64.b64decode(seat_map_result.content[1].data).startswith(b"\x89PNG")
 
 
 async def test_nothing_is_booked_until_the_prepared_booking_is_confirmed(
     mcp: Client[Any], store: CinemaStore, dune_today: list[Showtime]
 ) -> None:
     evening = dune_today[2]
-    quote = await prepare(mcp, evening, ["D9", "D10"])
+    prepared = await mcp.call_tool(
+        "prepare_booking", {"showtime_id": evening.id, "seats": ["D9", "D10"], "customer_name": "Rafi"}
+    )
+    quote = prepared.structured_content
+    assert len(prepared.content) == 2
+    assert prepared.content[1].mime_type == "image/png"
+    assert base64.b64decode(prepared.content[1].data).startswith(b"\x89PNG")
     assert quote["summary"]["total_price_idr"] == 2 * evening.price_idr  # priced from the database
     assert await store.taken_seat_ids(evening.id) == set()
 

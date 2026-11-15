@@ -15,13 +15,16 @@ from fastmcp.dependencies import Depends
 from fastmcp.exceptions import ToolError
 from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
 from fastmcp.server.dependencies import get_access_token
+from fastmcp.tools import ToolResult
+from fastmcp.utilities.types import Image
 from pydantic import Field
 
 from app.core.errors import AppError
 from app.core.lifespan import Resources
 from app.middleware.rate_limit import key_id
-from app.schemas.cinema import Booking, BookingForm, BookingQuote, Cinema, CustomerName, Movie, SeatIds, Showtime
+from app.schemas.cinema import Booking, BookingForm, Cinema, CustomerName, Movie, SeatIds, Showtime
 from app.settings import Settings
+from app.utils.seat_image import render_seat_map_png
 from app.utils.seat_layout import SEAT_MAP_LEGEND, seat_map_text
 
 INSTRUCTIONS = """Tiketa books cinema seats. Call get_cinema first: it gives the cinema's current date and time \
@@ -106,13 +109,19 @@ def build_mcp_server(
         return await get_resources().catalog.showtimes(day, get_now(), film_id)
 
     @tool(READ_ONLY)
-    async def get_seat_map(_: Caller, showtime_id: int) -> str:
-        """The seat map of a showtime, with the seats already taken. Read it before choosing seats."""
+    async def get_seat_map(_: Caller, showtime_id: int) -> ToolResult:
+        """The seat map of a showtime as text and a visual PNG image. Read it before choosing seats."""
         seat_map = await get_resources().catalog.seat_map(showtime_id)
         taken = {seat.id for row in seat_map.rows for seat in row.seats if seat.is_taken}
         showtime = seat_map.showtime
         heading = f"{showtime.movie_title}, {showtime.starts_at_local}, studio {showtime.studio_number}"
-        return f"{heading}\n{SEAT_MAP_LEGEND}\n{seat_map_text(taken)}"
+        text = f"{heading}\n{SEAT_MAP_LEGEND}\n{seat_map_text(taken)}"
+        png = render_seat_map_png(
+            taken,
+            title=showtime.movie_title,
+            subtitle=f"{showtime.starts_at_local} - Studio {showtime.studio_number}",
+        )
+        return ToolResult(content=[text, Image(data=png, format="png")])
 
     @tool(READ_ONLY)
     async def prepare_booking(
@@ -120,10 +129,19 @@ def build_mcp_server(
         showtime_id: int,
         seats: Annotated[SeatIds, Field(description="Every seat of the booking, ids as in the seat map")],
         customer_name: Annotated[CustomerName, Field(description="The name the booking is under")],
-    ) -> BookingQuote:
-        """Checks a booking and returns its summary, total and a confirmation id. Nothing is booked or held yet."""
+    ) -> ToolResult:
+        """Checks a booking and returns its summary, confirmation id, and visual seat preview. Nothing is held yet."""
         form = BookingForm(showtime_id=showtime_id, seats=seats, customer_name=customer_name, channel="mcp")
-        return await get_resources().bookings.prepare(form, owner, get_now())
+        quote = await get_resources().bookings.prepare(form, owner, get_now())
+        seat_map = await get_resources().catalog.seat_map(showtime_id)
+        taken = {seat.id for row in seat_map.rows for seat in row.seats if seat.is_taken}
+        png = render_seat_map_png(
+            taken,
+            set(quote.summary.seats),
+            title=quote.summary.movie_title,
+            subtitle=f"{quote.summary.starts_at_local} - Studio {quote.summary.studio_number}",
+        )
+        return ToolResult(content=[quote.model_dump_json(), Image(data=png, format="png")], structured_content=quote)
 
     @tool(BOOKS_ONCE)
     async def confirm_booking(

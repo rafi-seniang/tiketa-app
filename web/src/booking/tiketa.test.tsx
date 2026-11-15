@@ -138,6 +138,12 @@ function renderScreen() {
   );
 }
 
+async function openSeatStep() {
+  expect(screen.queryByRole("button", { name: "A1, free" })).not.toBeInTheDocument();
+  await userEvent.click(await screen.findByRole("button", { name: /Dune: Part Two/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /18:00/ }));
+}
+
 beforeEach(() => {
   vi.stubGlobal(
     "ResizeObserver",
@@ -162,6 +168,7 @@ test("the form books the chosen seats once, with an idempotency key", async () =
   });
   renderScreen();
 
+  await openSeatStep();
   await userEvent.click(await screen.findByRole("button", { name: "A1, free" }));
   await userEvent.click(screen.getByRole("button", { name: "A2, free" }));
   expect(screen.getByRole("button", { name: "A4, taken" })).toBeDisabled();
@@ -185,6 +192,7 @@ test("the week runs Monday to Sunday, and its days already past cannot be chosen
   const sent = serve((call) => (call.path === "/v1/bookings" ? json([]) : undefined));
   renderScreen();
 
+  await userEvent.click(await screen.findByRole("button", { name: /Dune: Part Two/ }));
   const today = await screen.findByRole("button", { name: /Today/ });
   expect(today).toHaveAttribute("aria-pressed", "true");
   expect(screen.getByRole("button", { name: /Mon.*9 Nov/ })).toBeDisabled();
@@ -223,6 +231,7 @@ test("the chat's summary shows on the map and books only after Confirm", async (
   await userEvent.type(message, "dune besok jam 6, B1 B2, Rafi{Enter}");
   const summary = await screen.findByRole("region", { name: "Booking waiting for your answer" });
   expect(within(summary).getByText("B1, B2")).toBeInTheDocument();
+  expect(within(summary).getByRole("img", { name: /Seat map preview for B1, B2/ })).toBeInTheDocument();
   expect(await screen.findByRole("button", { name: "B1, in the chat's summary" })).toBeInTheDocument();
   expect(sent.some((call) => call.path === "/v1/sessions/s1/confirmation")).toBe(false);
 
@@ -244,6 +253,7 @@ test("with the agent off the chat says so and the form still books", async () =>
 
   expect(await screen.findByText(/The booking agent is off right now/)).toBeInTheDocument();
   expect(screen.getByLabelText("Message to the agent")).toBeDisabled();
+  await openSeatStep();
   await userEvent.click(await screen.findByRole("button", { name: "A1, free" }));
   await userEvent.type(screen.getByLabelText("Name on the booking"), "Rafi");
   await userEvent.click(screen.getByRole("button", { name: "Book 1 seat" }));
