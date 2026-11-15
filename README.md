@@ -22,6 +22,10 @@ either can be off without anything else noticing.
 
 v1 (tag `v1.0`, 2025) was a Flask app with server-rendered pages. This is v2.
 
+Live at [rafilab.com/tiketa](https://rafilab.com/tiketa/), with the MCP server at
+`https://rafilab.com/tiketa/api/mcp/`. How it is deployed: [lab-deploy](https://github.com/rafi-seniang/lab-deploy).
+The web app is served under a path there (`VITE_BASE_PATH=/tiketa/` at build time).
+
 ## What holds, whoever books
 
 | Rule | How |
@@ -107,7 +111,7 @@ Without Docker, set `DATABASE_URL=sqlite+aiosqlite:///./tiketa.db` and an empty 
 `127.0.0.1` rather than `localhost` in the service's own URLs (`localhost` tries IPv6 first and stalls). Open the web
 app on `localhost`, the host its API addresses use, so the guest cookie reaches the API and the chat agent alike.
 
-    make check                    # ruff, mypy strict, 46 tests on SQLite with no services, 90% coverage floor
+    make check                    # ruff, mypy strict, 47 tests on SQLite with no services, 90% coverage floor
     make test-postgres            # the same tests on PostgreSQL, as CI also runs them
     cd web && npm run lint && npm test && npm run build
 
