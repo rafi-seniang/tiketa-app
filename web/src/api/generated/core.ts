@@ -298,6 +298,8 @@ export interface components {
       studio_number: number;
       /** Poster Url */
       poster_url: string | null;
+      /** Backdrop Url */
+      backdrop_url: string | null;
       /** Trailer Youtube Id */
       trailer_youtube_id: string | null;
     };

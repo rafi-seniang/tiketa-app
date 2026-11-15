@@ -18,6 +18,8 @@ from app.utils.clock import local_week_window, week_days
 # Odd studios start on the half hour, even ones half an hour later, so films do not all start together
 ODD_STUDIO_START_TIMES = (time(12, 30), time(15, 15), time(18, 0), time(20, 45))
 EVEN_STUDIO_START_TIMES = (time(13, 0), time(15, 45), time(18, 30), time(21, 15))
+# What a published film takes from the catalogue on every run. Not its studio: its showtimes depend on that
+CATALOGUE_FIELDS = ("synopsis", "release_year", "genres", "poster_url", "backdrop_url", "trailer_youtube_id")
 # Ticket price by weekday (Monday is 0): Monday to Thursday, Friday, then the weekend
 PRICE_IDR_BY_WEEKDAY = (45_000, 45_000, 45_000, 45_000, 50_000, 60_000, 60_000)
 
@@ -29,8 +31,13 @@ def start_times_of(studio_number: int) -> tuple[time, ...]:
 async def publish_week(sessions: Sessions, day: date, cinema_timezone: ZoneInfo) -> tuple[int, int]:
     """Adds the films and the showtimes still missing from the week `day` falls in. Returns how many of each."""
     async with sessions.begin() as db:
-        known_titles = set(await db.scalars(select(MovieRow.title)))
-        new_movies = [MovieRow(**movie) for movie in SAMPLE_MOVIES if movie["title"] not in known_titles]
+        known = {row.title: row for row in await db.scalars(select(MovieRow))}
+        # The catalogue is code: a film already on the programme takes its latest story, poster and pictures
+        for movie in SAMPLE_MOVIES:
+            if movie["title"] in known:
+                for field in CATALOGUE_FIELDS:
+                    setattr(known[movie["title"]], field, movie[field])
+        new_movies = [MovieRow(**movie) for movie in SAMPLE_MOVIES if movie["title"] not in known]
         db.add_all(new_movies)
         await db.flush()
         movies = (await db.scalars(select(MovieRow))).all()

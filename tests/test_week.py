@@ -6,7 +6,7 @@ import httpx
 from sqlalchemy import func, select
 
 from app.core.database import Sessions
-from app.models.cinema import ShowtimeRow
+from app.models.cinema import MovieRow, ShowtimeRow
 from app.repositories.cinema import CinemaStore
 from app.schemas.cinema import BookingRequest, Showtime
 from app.services.weekly_schedule import publish_week
@@ -42,6 +42,18 @@ async def test_a_published_week_has_every_film_on_each_of_its_seven_days(
 async def test_publishing_a_week_again_adds_nothing(sessions: Sessions) -> None:
     assert await publish_week(sessions, TODAY, CINEMA_TIMEZONE) == (0, 0)
     assert await publish_week(sessions, week_days(TODAY)[0], CINEMA_TIMEZONE) == (0, 0)  # any day of the same week
+
+
+async def test_a_film_already_published_takes_the_catalogue_again(sessions: Sessions) -> None:
+    async with sessions.begin() as db:
+        film = await db.scalar(select(MovieRow).where(MovieRow.id == DUNE))
+        assert film is not None
+        film.synopsis, film.backdrop_url = "an old story", None  # as published before the catalogue changed
+    await publish_week(sessions, TODAY, CINEMA_TIMEZONE)
+    async with sessions() as db:
+        film = await db.scalar(select(MovieRow).where(MovieRow.id == DUNE))
+    assert film is not None and film.synopsis.startswith("Paul Atreides joins Chani")
+    assert film.backdrop_url and film.backdrop_url.endswith(".jpg")
 
 
 async def test_the_next_week_is_added_and_the_old_week_stays_with_its_bookings(

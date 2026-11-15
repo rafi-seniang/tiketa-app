@@ -51,3 +51,10 @@ export function posterAt(movie: Movie, width: number): string | null {
   if (url.includes("images.weserv.nl")) return `${url}&w=${width}&h=${Math.round(width * 1.5)}&fit=cover&output=webp`;
   return url;
 }
+
+/** A film's wide still for the banner, at 1280px wide (TMDB's originals run to several megabytes). */
+export function backdropAt(movie: Movie): string | null {
+  const url = movie.backdrop_url;
+  if (!url) return null;
+  return url.includes("image.tmdb.org") ? url.replace("/original/", "/w1280/") : url;
+}

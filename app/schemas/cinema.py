@@ -35,6 +35,7 @@ class Movie(BaseModel):
     genres: list[str]
     studio_number: int
     poster_url: str | None
+    backdrop_url: str | None
     trailer_youtube_id: str | None
 
 
