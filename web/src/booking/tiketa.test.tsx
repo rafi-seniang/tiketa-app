@@ -256,7 +256,7 @@ test("a visitor copies the instructions that connect their own assistant to the 
   const user = userEvent.setup(); // gives the page a clipboard
   renderScreen();
 
-  await user.click(await screen.findByRole("button", { name: "Copy setup instructions" }));
+  await user.click(await screen.findByRole("button", { name: "Copy instructions" }));
   expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
   const copied = await navigator.clipboard.readText();
   expect(copied).toContain("MCP server URL: http://localhost:8070/mcp/");
