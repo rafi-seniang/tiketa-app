@@ -14,10 +14,80 @@ export type AgentStatus = "on" | "off" | "checking";
 
 const STATUS_WORDS: Record<AgentStatus, string> = { on: "On", off: "Off", checking: "Checking" };
 
+interface SeatMapPreview {
+  rows: ReadonlyArray<{ row: string; seats: ReadonlyArray<{ id: string; is_taken: boolean }> }>;
+  aisle_after_seat: number;
+  walkway_before_row: string;
+}
+
+const MINI_ROWS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "L", "M"];
+
+function SeatMiniMap({ seats, seatMap }: { seats: string[]; seatMap?: SeatMapPreview }) {
+  const chosen = new Set(seats);
+  const rows =
+    seatMap?.rows ??
+    MINI_ROWS.map((row) => ({
+      row,
+      seats: Array.from({ length: 18 }, (_, index) => ({ id: `${row}${index + 1}`, is_taken: false })),
+    }));
+  const aisleAfter = seatMap?.aisle_after_seat ?? 9;
+  const walkwayBefore = seatMap?.walkway_before_row ?? "L";
+  let y = 22;
+
+  return (
+    <svg
+      className="tk-mini-map"
+      viewBox="0 0 244 164"
+      role="img"
+      aria-label={`Seat map preview for ${seats.join(", ")}`}
+    >
+      <rect x={44} y={6} width={166} height={4} rx={2} fill="var(--seat-taken)" />
+      <text x={127} y={17} textAnchor="middle" fontSize={7} fill="var(--muted)">
+        SCREEN
+      </text>
+      {rows.map((row) => {
+        if (row.row === walkwayBefore) y += 6;
+        const rowY = y;
+        y += 10;
+        let x = 20;
+        return (
+          <g key={row.row}>
+            <text x={9} y={rowY + 6.5} textAnchor="middle" fontSize={7} fill="var(--muted)">
+              {row.row}
+            </text>
+            {row.seats.map((seat, index) => {
+              const seatX = x;
+              x += 11;
+              if (index + 1 === aisleAfter) x += 10;
+              const isMine = chosen.has(seat.id);
+              const fill = isMine ? "var(--seat-mine)" : seat.is_taken ? "var(--seat-taken)" : "var(--surface)";
+              const stroke = isMine || seat.is_taken ? "none" : "var(--control)";
+              return (
+                <rect
+                  key={seat.id}
+                  x={seatX}
+                  y={rowY}
+                  width={9}
+                  height={8}
+                  rx={1.5}
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={0.8}
+                />
+              );
+            })}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 interface ChatPanelProps {
   status: AgentStatus;
   lines: ChatLine[];
   pending: BookingSummary | null;
+  pendingSeatMap?: SeatMapPreview;
   activity: string | null;
   busy: boolean;
   ready: boolean;
@@ -172,6 +242,7 @@ export function ChatPanel(props: ChatPanelProps) {
               </dd>
             </div>
           </dl>
+          <SeatMiniMap seats={pending.seats} seatMap={props.pendingSeatMap} />
           <div className="tk-summary-actions">
             <button type="button" className="btn primary" disabled={busy} onClick={() => props.onAnswer(true)}>
               Confirm booking

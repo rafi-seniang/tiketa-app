@@ -230,12 +230,14 @@ export function TiketaBooking() {
     enabled: agentStatus === "on",
   });
 
-  const movie = movies.data?.find((candidate) => candidate.id === movieId) ?? movies.data?.[0];
+  const movie = movies.data?.find((candidate) => candidate.id === movieId);
   const filmShowtimes = useMemo(
-    () => showtimes.data?.filter((showtime) => showtime.movie_id === movie?.id) ?? [],
-    [showtimes.data, movie?.id],
+    () => (movie ? (showtimes.data?.filter((showtime) => showtime.movie_id === movie.id) ?? []) : []),
+    [showtimes.data, movie],
   );
   const map = seats.data?.showtime.id === showtimeId ? seats.data : undefined;
+  const activeShowtime = filmShowtimes.find((showtime) => showtime.id === showtimeId) ?? map?.showtime;
+  const step: "film" | "schedule" | "seats" = showtimeId !== null ? "seats" : movieId !== null ? "schedule" : "film";
 
   // The days still to come load in the background, so switching days is instant
   useEffect(() => {
@@ -248,11 +250,11 @@ export function TiketaBooking() {
     }
   }, [days, queryClient]);
 
-  // A film and day with showtimes always shows a seat map: the first showtime unless one is chosen
+  // Clear the chosen showtime only if the selected film or day no longer includes it
   useEffect(() => {
-    if (!showtimes.data) return;
+    if (!showtimes.data || showtimeId === null) return;
     if (!filmShowtimes.some((showtime) => showtime.id === showtimeId)) {
-      setShowtimeId(filmShowtimes[0]?.id ?? null);
+      setShowtimeId(null);
       setSelected([]);
     }
   }, [showtimes.data, filmShowtimes, showtimeId]);
@@ -293,6 +295,22 @@ export function TiketaBooking() {
     onBooked: refreshAfterBooking,
     onTurnEnd: () => void queryClient.invalidateQueries({ queryKey: keys.usage }),
   });
+
+  const pendingShowtimeId = chat.pending?.showtime_id ?? null;
+  const pendingSeats = useQuery({
+    queryKey: keys.seats(pendingShowtimeId ?? 0),
+    queryFn: () => fetchSeats(pendingShowtimeId ?? 0),
+    enabled: pendingShowtimeId !== null && pendingShowtimeId !== showtimeId,
+    staleTime: 5_000,
+  });
+  const pendingSeatMap =
+    pendingShowtimeId === null
+      ? undefined
+      : pendingShowtimeId === showtimeId
+        ? map
+        : pendingSeats.data?.showtime.id === pendingShowtimeId
+          ? pendingSeats.data
+          : undefined;
 
   // A new summary from the chat moves the map to its showtime, unless seats are being chosen on the form
   const followed = useRef<BookingSummary | null>(null);
@@ -369,7 +387,11 @@ export function TiketaBooking() {
     ? `${map.showtime.movie_title}, ${whenLabel(map.showtime.starts_at)}, studio ${map.showtime.studio_number}. ${free} of ${total} seats free.`
     : cinema.data && !cinema.data.week.is_published
       ? "This week's showtimes are not published yet."
-      : "Choose a film, a day and a time, or ask the agent in Indonesian or English.";
+      : step === "film"
+        ? "Step 1: choose a film, or ask the agent in Indonesian or English."
+        : step === "schedule"
+          ? `Step 2: choose a day and time for ${movie?.title ?? "this film"}, or ask the agent.`
+          : "Loading seats for the selected showtime.";
   const nextDay = days.find((option) => option.day > day);
 
   return (
@@ -429,181 +451,278 @@ export function TiketaBooking() {
         </div>
 
         <div className="tk-form">
-          <section className="tk-films" aria-labelledby="tk-films-title">
-            <header className="tk-films-head">
-              <h2 id="tk-films-title">Film</h2>
-            </header>
-            {movies.isError ? (
-              <p className="error">Films could not load: {movies.error.message}</p>
-            ) : movies.isPending ? (
-              <div className="tk-film-rail tk-film-rail-loading" aria-hidden="true" />
-            ) : (
-              <FilmRail
-                movies={movies.data}
-                selectedId={movie?.id}
-                renderFilm={(candidate) => (
-                  <button
-                    key={candidate.id}
-                    type="button"
-                    className="tk-film"
-                    aria-pressed={candidate.id === movie?.id}
-                    onClick={() => {
-                      setMovieId(candidate.id);
-                      setNotice(null);
-                    }}
-                  >
-                    <Poster movie={candidate} />
-                    <span className="tk-film-title">{candidate.title}</span>
-                    <span className="tk-film-meta" title={candidate.genres.join(", ")}>
-                      {candidate.release_year}
-                    </span>
-                  </button>
-                )}
-              />
-            )}
-          </section>
+          <nav className="tk-steps" aria-label="Booking steps">
+            <button
+              type="button"
+              className="tk-step"
+              aria-current={step === "film" ? "step" : undefined}
+              onClick={() => {
+                setMovieId(null);
+                setShowtimeId(null);
+                setSelected([]);
+                setNotice(null);
+              }}
+            >
+              <span>1. Film</span>
+              {(movie?.title ?? activeShowtime?.movie_title) && (
+                <small>{movie?.title ?? activeShowtime?.movie_title}</small>
+              )}
+            </button>
+            <button
+              type="button"
+              className="tk-step"
+              aria-current={step === "schedule" ? "step" : undefined}
+              disabled={!movie && showtimeId === null}
+              onClick={() => {
+                if (!movie && activeShowtime) setMovieId(activeShowtime.movie_id);
+                setShowtimeId(null);
+                setSelected([]);
+                setNotice(null);
+              }}
+            >
+              <span>2. Schedule</span>
+              {activeShowtime && <small>{whenLabel(activeShowtime.starts_at)}</small>}
+            </button>
+            <span className="tk-step" aria-current={step === "seats" ? "step" : undefined}>
+              <span>3. Seats</span>
+              {selected.length > 0 && <small>{selected.join(", ")}</small>}
+            </span>
+          </nav>
 
-          <section className="tk-when" aria-labelledby="tk-when-title">
-            <div className="tk-when-head">
-              <h2 id="tk-when-title">Day and time</h2>
-              <div className="segmented tk-days">
-                {days.map((option) => (
-                  <button
-                    key={option.day}
-                    type="button"
-                    disabled={option.isPast}
-                    aria-pressed={option.day === day}
-                    onClick={() => {
-                      setDay(option.day);
-                      setNotice(null);
-                    }}
-                  >
-                    <span>{option.weekday}</span>
-                    <span className="num">{option.date}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="tk-times">
-              {filmShowtimes.map((showtime) => (
+          {step === "film" && (
+            <section className="tk-films" aria-labelledby="tk-films-title">
+              <header className="tk-films-head">
+                <h2 id="tk-films-title">1. Choose a film</h2>
+              </header>
+              {movies.isError ? (
+                <p className="error">Films could not load: {movies.error.message}</p>
+              ) : movies.isPending ? (
+                <div className="tk-film-rail tk-film-rail-loading" aria-hidden="true" />
+              ) : (
+                <FilmRail
+                  movies={movies.data}
+                  selectedId={movie?.id}
+                  renderFilm={(candidate) => (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      className="tk-film"
+                      aria-pressed={candidate.id === movie?.id}
+                      onClick={() => {
+                        setMovieId(candidate.id);
+                        setShowtimeId(null);
+                        setSelected([]);
+                        setNotice(null);
+                      }}
+                    >
+                      <Poster movie={candidate} />
+                      <span className="tk-film-title">{candidate.title}</span>
+                      <span className="tk-film-meta" title={candidate.genres.join(", ")}>
+                        {candidate.release_year}
+                      </span>
+                    </button>
+                  )}
+                />
+              )}
+            </section>
+          )}
+
+          {step === "schedule" && (
+            <section className="tk-when" aria-labelledby="tk-when-title">
+              <div className="tk-step-bar">
+                <span>
+                  Film: <strong>{movie?.title ?? activeShowtime?.movie_title}</strong>
+                </span>
                 <button
-                  key={showtime.id}
                   type="button"
-                  className="tk-time"
-                  aria-pressed={showtime.id === showtimeId}
-                  onPointerEnter={() => prefetchSeats(showtime)}
-                  onFocus={() => prefetchSeats(showtime)}
+                  className="tk-link"
                   onClick={() => {
-                    setShowtimeId(showtime.id);
+                    setMovieId(null);
+                    setShowtimeId(null);
                     setSelected([]);
                     setNotice(null);
                   }}
                 >
-                  <strong className="num">{clockTime(showtime.starts_at)}</strong>
-                  <span className="num">
-                    {rupiah(showtime.price_idr)} · {showtime.seats_left} left
-                  </span>
+                  Change film
                 </button>
-              ))}
-              {showtimes.data && filmShowtimes.length === 0 && (
-                <p className="empty">
-                  No more showtimes of {movie?.title ?? "this film"} on this day.{" "}
-                  {nextDay ? (
-                    <button type="button" className="tk-link" onClick={() => setDay(nextDay.day)}>
-                      See the next day
+              </div>
+              <div className="tk-when-head">
+                <h2 id="tk-when-title">2. Choose a day and time</h2>
+                <div className="segmented tk-days">
+                  {days.map((option) => (
+                    <button
+                      key={option.day}
+                      type="button"
+                      disabled={option.isPast}
+                      aria-pressed={option.day === day}
+                      onClick={() => {
+                        setDay(option.day);
+                        setShowtimeId(null);
+                        setSelected([]);
+                        setNotice(null);
+                      }}
+                    >
+                      <span>{option.weekday}</span>
+                      <span className="num">{option.date}</span>
                     </button>
-                  ) : (
-                    "The new week's showtimes open on Monday."
-                  )}
+                  ))}
+                </div>
+              </div>
+              <div className="tk-times">
+                {filmShowtimes.map((showtime) => (
+                  <button
+                    key={showtime.id}
+                    type="button"
+                    className="tk-time"
+                    aria-pressed={showtime.id === showtimeId}
+                    onPointerEnter={() => prefetchSeats(showtime)}
+                    onFocus={() => prefetchSeats(showtime)}
+                    onClick={() => {
+                      setShowtimeId(showtime.id);
+                      setSelected([]);
+                      setNotice(null);
+                    }}
+                  >
+                    <strong className="num">{clockTime(showtime.starts_at)}</strong>
+                    <span className="num">
+                      {rupiah(showtime.price_idr)} · {showtime.seats_left} left
+                    </span>
+                  </button>
+                ))}
+                {showtimes.data && filmShowtimes.length === 0 && (
+                  <p className="empty">
+                    No more showtimes of {movie?.title ?? "this film"} on this day.{" "}
+                    {nextDay ? (
+                      <button type="button" className="tk-link" onClick={() => setDay(nextDay.day)}>
+                        See the next day
+                      </button>
+                    ) : (
+                      "The new week's showtimes open on Monday."
+                    )}
+                  </p>
+                )}
+                {showtimes.isPending && <span className="tk-time tk-time-loading" aria-hidden="true" />}
+              </div>
+            </section>
+          )}
+
+          {step === "seats" && (
+            <section className="panel tk-seats" aria-labelledby="tk-seats-title">
+              <div className="tk-step-bar">
+                <span>
+                  <strong>{movie?.title ?? activeShowtime?.movie_title}</strong>
+                  {activeShowtime && ` · ${whenLabel(activeShowtime.starts_at)}`}
+                </span>
+                <div className="tk-step-actions">
+                  <button
+                    type="button"
+                    className="tk-link"
+                    onClick={() => {
+                      if (!movie && activeShowtime) setMovieId(activeShowtime.movie_id);
+                      setShowtimeId(null);
+                      setSelected([]);
+                      setNotice(null);
+                    }}
+                  >
+                    Change schedule
+                  </button>
+                  <button
+                    type="button"
+                    className="tk-link"
+                    onClick={() => {
+                      setMovieId(null);
+                      setShowtimeId(null);
+                      setSelected([]);
+                      setNotice(null);
+                    }}
+                  >
+                    Change film
+                  </button>
+                </div>
+              </div>
+              <header>
+                <h2 id="tk-seats-title">3. Choose seats</h2>
+                <button type="button" className="btn tk-zoom" aria-pressed={zoomed} onClick={() => setZoomed(!zoomed)}>
+                  {zoomed ? "Fit to screen" : "Zoom in"}
+                </button>
+                <ul className="tk-legend">
+                  <li data-state="free">Free</li>
+                  <li data-state="taken">Taken</li>
+                  <li data-state="mine">Yours</li>
+                  {heldByChat.length > 0 && <li data-state="held">In the chat's summary</li>}
+                </ul>
+              </header>
+              {map ? (
+                <SeatMap
+                  zoomed={zoomed}
+                  map={map}
+                  selected={selected}
+                  heldByChat={heldByChat}
+                  full={selected.length >= maxSeats}
+                  onToggle={toggle}
+                />
+              ) : showtimeId === null ? (
+                <p className="empty">Choose a showtime to see its seats.</p>
+              ) : seats.isError ? (
+                <div className="error">
+                  <p>The seats could not load: {seats.error.message}</p>
+                  <button type="button" className="btn" onClick={() => void seats.refetch()}>
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <SeatMapPlaceholder />
+              )}
+
+              <form className="tk-checkout" data-active={selected.length > 0} onSubmit={submit}>
+                <div className="tk-choice">
+                  <span className="tk-choice-seats num">
+                    {selected.length === 0 ? "No seats chosen" : selected.join(", ")}
+                  </span>
+                  <span className="tk-choice-total num">
+                    {selected.length === 0
+                      ? `Up to ${maxSeats} seats, ${price ? rupiah(price) : "-"} each`
+                      : `${selected.length} x ${rupiah(price)} = `}
+                    {selected.length > 0 && <b>{rupiah(selected.length * price)}</b>}
+                  </span>
+                </div>
+                <div className="field tk-name">
+                  <label htmlFor="tk-name">Name on the booking</label>
+                  <input
+                    id="tk-name"
+                    className="input"
+                    value={name}
+                    maxLength={80}
+                    autoComplete="name"
+                    onChange={(event) => setName(event.target.value)}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn primary tk-book"
+                  disabled={selected.length === 0 || name.trim() === "" || book.isPending}
+                >
+                  {book.isPending
+                    ? "Booking"
+                    : selected.length > 0
+                      ? `Book ${selected.length} ${selected.length === 1 ? "seat" : "seats"}`
+                      : "Book"}
+                </button>
+              </form>
+              {notice?.kind === "booked" && (
+                <p className="tk-notice" data-kind="booked" role="status">
+                  Booked <strong className="tk-code">{notice.booking.code}</strong>: {notice.booking.seats.join(", ")}{" "}
+                  for {notice.booking.showtime.movie_title}, {whenLabel(notice.booking.showtime.starts_at)}. Pay{" "}
+                  {rupiah(notice.booking.total_price_idr)} at the counter with the code.
                 </p>
               )}
-              {showtimes.isPending && <span className="tk-time tk-time-loading" aria-hidden="true" />}
-            </div>
-          </section>
-
-          <section className="panel tk-seats" aria-labelledby="tk-seats-title">
-            <header>
-              <h2 id="tk-seats-title">Seats</h2>
-              <button type="button" className="btn tk-zoom" aria-pressed={zoomed} onClick={() => setZoomed(!zoomed)}>
-                {zoomed ? "Fit to screen" : "Zoom in"}
-              </button>
-              <ul className="tk-legend">
-                <li data-state="free">Free</li>
-                <li data-state="taken">Taken</li>
-                <li data-state="mine">Yours</li>
-                {heldByChat.length > 0 && <li data-state="held">In the chat's summary</li>}
-              </ul>
-            </header>
-            {map ? (
-              <SeatMap
-                zoomed={zoomed}
-                map={map}
-                selected={selected}
-                heldByChat={heldByChat}
-                full={selected.length >= maxSeats}
-                onToggle={toggle}
-              />
-            ) : showtimeId === null ? (
-              <p className="empty">Choose a showtime to see its seats.</p>
-            ) : seats.isError ? (
-              <div className="error">
-                <p>The seats could not load: {seats.error.message}</p>
-                <button type="button" className="btn" onClick={() => void seats.refetch()}>
-                  Retry
-                </button>
-              </div>
-            ) : (
-              <SeatMapPlaceholder />
-            )}
-
-            <form className="tk-checkout" data-active={selected.length > 0} onSubmit={submit}>
-              <div className="tk-choice">
-                <span className="tk-choice-seats num">
-                  {selected.length === 0 ? "No seats chosen" : selected.join(", ")}
-                </span>
-                <span className="tk-choice-total num">
-                  {selected.length === 0
-                    ? `Up to ${maxSeats} seats, ${price ? rupiah(price) : "-"} each`
-                    : `${selected.length} x ${rupiah(price)} = `}
-                  {selected.length > 0 && <b>{rupiah(selected.length * price)}</b>}
-                </span>
-              </div>
-              <div className="field tk-name">
-                <label htmlFor="tk-name">Name on the booking</label>
-                <input
-                  id="tk-name"
-                  className="input"
-                  value={name}
-                  maxLength={80}
-                  autoComplete="name"
-                  onChange={(event) => setName(event.target.value)}
-                />
-              </div>
-              <button
-                type="submit"
-                className="btn primary tk-book"
-                disabled={selected.length === 0 || name.trim() === "" || book.isPending}
-              >
-                {book.isPending
-                  ? "Booking"
-                  : selected.length > 0
-                    ? `Book ${selected.length} ${selected.length === 1 ? "seat" : "seats"}`
-                    : "Book"}
-              </button>
-            </form>
-            {notice?.kind === "booked" && (
-              <p className="tk-notice" data-kind="booked" role="status">
-                Booked <strong className="tk-code">{notice.booking.code}</strong>: {notice.booking.seats.join(", ")} for{" "}
-                {notice.booking.showtime.movie_title}, {whenLabel(notice.booking.showtime.starts_at)}. Pay{" "}
-                {rupiah(notice.booking.total_price_idr)} at the counter with the code.
-              </p>
-            )}
-            {notice?.kind === "refused" && (
-              <p className="tk-notice" data-kind="refused" role="alert">
-                {notice.text}
-              </p>
-            )}
-          </section>
+              {notice?.kind === "refused" && (
+                <p className="tk-notice" data-kind="refused" role="alert">
+                  {notice.text}
+                </p>
+              )}
+            </section>
+          )}
 
           {bookings.data ? (
             <BookingsTable bookings={bookings.data} />
@@ -625,6 +744,7 @@ export function TiketaBooking() {
           status={agentStatus}
           lines={chat.lines}
           pending={chat.pending}
+          pendingSeatMap={pendingSeatMap}
           activity={chat.activity}
           busy={chat.busy}
           ready={chat.ready}

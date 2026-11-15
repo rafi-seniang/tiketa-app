@@ -48,6 +48,76 @@
   font-weight: 600;
 }
 
+/* ---------- 3-step booking flow ---------- */
+.tk-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.tk-step {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: left;
+  font: inherit;
+  font-size: var(--fs-small);
+}
+button.tk-step {
+  cursor: pointer;
+}
+button.tk-step:hover:not(:disabled) {
+  border-color: var(--control);
+  color: var(--text);
+}
+button.tk-step:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.tk-step span {
+  font-weight: 600;
+}
+.tk-step small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.tk-step[aria-current="step"] {
+  border-color: var(--text);
+  background: var(--raised);
+  color: var(--text);
+}
+.tk-step-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--fs-small);
+}
+.tk-step-actions {
+  display: flex;
+  gap: 14px;
+}
+.tk-mini-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 10px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
 /* ---------- films ---------- */
 .tk-films {
   display: grid;
