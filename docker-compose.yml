@@ -1,0 +1,31 @@
+# What the service needs locally: Postgres (films, showtimes, bookings) and Redis (the shared rate limit).
+# The service runs on the host: `docker compose up -d`, `alembic upgrade head`, `python scripts/publish_week.py`,
+# then `python main.py`. Ports listen on 127.0.0.1 only and sit beside the chat agent's (5433 and 6383).
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    container_name: tiketa-core-postgres
+    environment:
+      POSTGRES_USER: tiketa
+      POSTGRES_PASSWORD: tiketa-local
+      POSTGRES_DB: tiketa
+    ports: ["127.0.0.1:5434:5432"]
+    volumes: ["tiketa-core-postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tiketa -d tiketa"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: tiketa-core-redis
+    ports: ["127.0.0.1:6384:6379"]
+    # Rate counters all expire, so only keys with a timeout may be evicted
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "volatile-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+volumes:
+  tiketa-core-postgres:
