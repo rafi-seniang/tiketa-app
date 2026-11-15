@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, test, vi } from "vitest";
-import { TiketaBooking } from "./TiketaBooking";
+import { TiketaApp } from "./TiketaApp";
 
 const AGENT_PORT = "8060";
 const WEEK = {
@@ -133,15 +133,18 @@ function renderScreen() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
-      <TiketaBooking />
+      <TiketaApp />
     </QueryClientProvider>,
   );
 }
 
+/** The manual way: the film from Now showing, then a time on its page, then the room. */
 async function openSeatStep() {
   expect(screen.queryByRole("button", { name: "A1, free" })).not.toBeInTheDocument();
-  await userEvent.click(await screen.findByRole("button", { name: /Dune: Part Two/ }));
-  await userEvent.click(await screen.findByRole("button", { name: /18:00/ }));
+  await userEvent.click(await screen.findByRole("link", { name: /Dune: Part Two/ }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Dune: Part Two" })).toBeInTheDocument();
+  expect(screen.getByText("Paul Atreides joins the Fremen.")).toBeInTheDocument();
+  await userEvent.click(await screen.findByRole("link", { name: /18:00/ }));
 }
 
 beforeEach(() => {
@@ -153,6 +156,7 @@ beforeEach(() => {
     },
   );
   window.localStorage.clear();
+  window.history.replaceState(null, "", "/"); // every test starts on Now showing
 });
 
 test("the form books the chosen seats once, with an idempotency key", async () => {
@@ -184,15 +188,17 @@ test("the form books the chosen seats once, with an idempotency key", async () =
   expect(toCore.filter((call) => call.path.startsWith("/v1")).every((call) => call.credentials === "include")).toBe(
     true,
   );
-  const table = await screen.findByRole("table");
-  expect(await within(table).findByText("Form")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("link", { name: "See my tickets" }));
+  const tickets = await screen.findByRole("list", { name: "Bookings" });
+  expect(within(tickets).getByText("TKFORM0001")).toBeInTheDocument();
+  expect(within(tickets).getByText("Seat map")).toBeInTheDocument();
 });
 
 test("the week runs Monday to Sunday, and its days already past cannot be chosen", async () => {
   const sent = serve((call) => (call.path === "/v1/bookings" ? json([]) : undefined));
   renderScreen();
 
-  await userEvent.click(await screen.findByRole("button", { name: /Dune: Part Two/ }));
+  await userEvent.click(await screen.findByRole("link", { name: /Dune: Part Two/ }));
   const today = await screen.findByRole("button", { name: /Today/ });
   expect(today).toHaveAttribute("aria-pressed", "true");
   expect(screen.getByRole("button", { name: /Mon.*9 Nov/ })).toBeDisabled();
@@ -205,7 +211,7 @@ test("the week runs Monday to Sunday, and its days already past cannot be chosen
   expect(days.length).toBeGreaterThan(0);
 });
 
-test("the chat's summary shows on the map and books only after Confirm", async () => {
+test("one sentence on Now showing opens the agent, its summary shows on the map, and it books only after Confirm", async () => {
   const sent = serve((call) => {
     if (call.path === "/v1/bookings") return json([]);
     if (call.path === "/v1/sessions/s1/messages") {
@@ -226,12 +232,15 @@ test("the chat's summary shows on the map and books only after Confirm", async (
   });
   renderScreen();
 
-  const message = await screen.findByLabelText("Message to the agent");
-  await screen.findByText("Dune besok malam, 2 kursi tengah sebelahan"); // the conversation has started
-  await userEvent.type(message, "dune besok jam 6, B1 B2, Rafi{Enter}");
+  const ask = screen.getByLabelText("What to book");
+  await userEvent.type(ask, "dune besok jam 6, B1 B2, Rafi");
+  const send = screen.getByRole("button", { name: "Ask the agent" });
+  await vi.waitFor(() => expect(send).toBeEnabled()); // the conversation has started
+  await userEvent.click(send);
   const summary = await screen.findByRole("region", { name: "Booking waiting for your answer" });
   expect(within(summary).getByText("B1, B2")).toBeInTheDocument();
-  expect(within(summary).getByRole("img", { name: /Seat map preview for B1, B2/ })).toBeInTheDocument();
+  expect(await within(summary).findByRole("img", { name: /Seat map preview for B1, B2/ })).toBeInTheDocument();
+  await userEvent.click(within(summary).getByRole("button", { name: "Show on the seat map" }));
   expect(await screen.findByRole("button", { name: "B1, in the chat's summary" })).toBeInTheDocument();
   expect(sent.some((call) => call.path === "/v1/sessions/s1/confirmation")).toBe(false);
 
@@ -252,7 +261,10 @@ test("with the agent off the chat says so and the form still books", async () =>
   renderScreen();
 
   expect(await screen.findByText(/The booking agent is off right now/)).toBeInTheDocument();
+  expect(screen.getByLabelText("What to book")).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Chat with the agent" }));
   expect(screen.getByLabelText("Message to the agent")).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Close" }));
   await openSeatStep();
   await userEvent.click(await screen.findByRole("button", { name: "A1, free" }));
   await userEvent.type(screen.getByLabelText("Name on the booking"), "Rafi");

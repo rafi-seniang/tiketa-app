@@ -1,9 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { TiketaBooking } from "./booking/TiketaBooking";
+import { TiketaApp } from "./booking/TiketaApp";
 import { ErrorBoundary } from "./shell/ErrorBoundary";
-import "./styles/brand.css";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false } } });
 
@@ -14,7 +13,7 @@ createRoot(root).render(
   <StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <TiketaBooking />
+        <TiketaApp />
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>,

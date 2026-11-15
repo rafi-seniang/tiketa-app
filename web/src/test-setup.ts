@@ -17,6 +17,7 @@ function stubBrowserApis() {
     addEventListener() {},
     removeEventListener() {},
   }));
+  vi.stubGlobal("scrollTo", () => {});
   URL.createObjectURL = vi.fn(() => "blob:preview");
   URL.revokeObjectURL = vi.fn();
 }
