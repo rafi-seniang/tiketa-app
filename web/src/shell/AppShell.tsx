@@ -6,13 +6,12 @@ interface AppShellProps {
   mark: ReactNode;
   scope: { line: string; detail: string };
   sidebar?: ReactNode;
-  sidebarFooter?: ReactNode;
   className?: string;
   children: ReactNode;
 }
 
 /** The frame the booking screen sits in: the tinted L of sidebar and top bar, and the white sheet. */
-export function AppShell({ product, mark, scope, sidebar, sidebarFooter, className, children }: AppShellProps) {
+export function AppShell({ product, mark, scope, sidebar, className, children }: AppShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <div className={`app-shell${className ? ` ${className}` : ""}`}>
@@ -35,7 +34,6 @@ export function AppShell({ product, mark, scope, sidebar, sidebarFooter, classNa
             <span>{scope.detail}</span>
           </span>
           {sidebar}
-          {sidebarFooter && <div className="bottom">{sidebarFooter}</div>}
         </aside>
 
         <header className="topbar">

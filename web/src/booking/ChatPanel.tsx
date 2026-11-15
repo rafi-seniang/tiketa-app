@@ -20,18 +20,12 @@ interface SeatMapPreview {
   walkway_before_row: string;
 }
 
-const MINI_ROWS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "L", "M"];
-
-function SeatMiniMap({ seats, seatMap }: { seats: string[]; seatMap?: SeatMapPreview }) {
+// Drawn only from the showtime's real seat map, so a seat shown free is free
+function SeatMiniMap({ seats, seatMap }: { seats: string[]; seatMap: SeatMapPreview }) {
   const chosen = new Set(seats);
-  const rows =
-    seatMap?.rows ??
-    MINI_ROWS.map((row) => ({
-      row,
-      seats: Array.from({ length: 18 }, (_, index) => ({ id: `${row}${index + 1}`, is_taken: false })),
-    }));
-  const aisleAfter = seatMap?.aisle_after_seat ?? 9;
-  const walkwayBefore = seatMap?.walkway_before_row ?? "L";
+  const rows = seatMap.rows;
+  const aisleAfter = seatMap.aisle_after_seat;
+  const walkwayBefore = seatMap.walkway_before_row;
   let y = 22;
 
   return (
@@ -242,7 +236,7 @@ export function ChatPanel(props: ChatPanelProps) {
               </dd>
             </div>
           </dl>
-          <SeatMiniMap seats={pending.seats} seatMap={props.pendingSeatMap} />
+          {props.pendingSeatMap && <SeatMiniMap seats={pending.seats} seatMap={props.pendingSeatMap} />}
           <div className="tk-summary-actions">
             <button type="button" className="btn primary" disabled={busy} onClick={() => props.onAnswer(true)}>
               Confirm booking

@@ -744,27 +744,6 @@ button.tk-step:disabled {
   height: 40px;
 }
 
-/* ---------- the photo in the sidebar ---------- */
-.tk-photo {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0 8px;
-}
-.tk-photo img {
-  width: 100%;
-  height: auto;
-  border-radius: 4px;
-}
-.tk-photo figcaption {
-  font-size: var(--fs-small);
-  line-height: 16px;
-  color: var(--muted);
-}
-.tk-photo a {
-  color: inherit;
-}
-
 /* ---------- tablet and phone: one region at a time ---------- */
 @media (max-width: 860px) {
   .tk-layout {
