@@ -170,6 +170,12 @@ class CinemaStore:
             rows = await db.scalars(query.order_by(BookingRow.created_at.desc(), BookingRow.id.desc()).limit(limit))
             return await self._bookings_of(db, rows.all())
 
+    async def booking_with_code(self, code: str, owner: str) -> Booking | None:
+        query = select(BookingRow).where(BookingRow.code == code, BookingRow.owner == owner)
+        async with self._sessions() as db:
+            row = await db.scalar(query)
+            return None if row is None else (await self._bookings_of(db, [row]))[0]
+
     async def _booking_with_key(self, idempotency_key: str) -> Booking | None:
         async with self._sessions() as db:
             row = await db.scalar(select(BookingRow).where(BookingRow.idempotency_key == idempotency_key))

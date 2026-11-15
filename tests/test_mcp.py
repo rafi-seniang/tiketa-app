@@ -38,8 +38,8 @@ async def test_the_tools_say_which_ones_only_read(mcp: Client[Any]) -> None:
         "get_seat_map",
         "prepare_booking",
         "confirm_booking",
-        "list_my_bookings",
-    }
+        "get_booking",
+    }  # no list without keys: every such caller is the same caller
     assert tools["prepare_booking"].annotations.read_only_hint is True
     assert tools["confirm_booking"].annotations.read_only_hint is False
     assert "owner" not in tools["prepare_booking"].input_schema["properties"]  # the caller is never an argument
@@ -68,8 +68,10 @@ async def test_nothing_is_booked_until_the_prepared_booking_is_confirmed(
     assert booking["channel"] == "mcp" and booking["seats"] == ["D9", "D10"]
     again = (await mcp.call_tool("confirm_booking", confirmation)).structured_content
     assert again["code"] == booking["code"]  # confirming twice books once
-    mine = (await mcp.call_tool("list_my_bookings", {})).structured_content["result"]
-    assert [item["code"] for item in mine] == [booking["code"]]
+    found = (await mcp.call_tool("get_booking", {"booking_code": booking["code"]})).structured_content
+    assert found["seats"] == ["D9", "D10"] and found["customer_name"] == "Rafi"
+    with pytest.raises(ToolError, match="no booking with this code"):
+        await mcp.call_tool("get_booking", {"booking_code": "TK00000000"})
 
 
 async def test_a_seat_sold_while_the_person_decides_is_refused_at_confirmation(
@@ -131,9 +133,26 @@ async def test_over_http_a_client_needs_an_api_key_and_books_as_that_caller(
                 await stranger.list_tools()
         async with connect("test-key-0001") as known:
             quote = await prepare(known, dune_today[2], ["E5"])
-            await known.call_tool("confirm_booking", {"confirmation_id": quote["confirmation_id"]})
+            booked = await known.call_tool("confirm_booking", {"confirmation_id": quote["confirmation_id"]})
+            mine = (await known.call_tool("list_my_bookings", {})).structured_content["result"]
+            assert [item["code"] for item in mine] == [booked.structured_content["code"]]
+        async with connect("other-key-0002") as someone_else:  # a code alone does not open another caller's booking
+            with pytest.raises(ToolError, match="no booking with this code"):
+                await someone_else.call_tool("get_booking", {"booking_code": booked.structured_content["code"]})
     bookings = (await client.get("/v1/bookings")).json()  # the same key on the HTTP API is the same caller
     assert [booking["channel"] for booking in bookings] == ["mcp"]
+
+
+async def test_a_public_server_takes_callers_without_a_key_and_lists_nobodys_bookings(
+    settings: Settings, resources: Resources, client: httpx.AsyncClient, dune_today: list[Showtime]
+) -> None:
+    public = settings.model_copy(update={"mcp_public": True})  # API keys stay set for the HTTP API
+    async with Client(build_mcp_server(lambda: resources, lambda: NOW, public)) as visitor:
+        assert "list_my_bookings" not in {tool.name for tool in await visitor.list_tools()}
+        quote = await prepare(visitor, dune_today[2], ["F5"])
+        booking = (await visitor.call_tool("confirm_booking", {"confirmation_id": quote["confirmation_id"]})).data
+        assert (await visitor.call_tool("get_booking", {"booking_code": booking.code})).data.seats == ["F5"]
+    assert (await client.get("/v1/bookings")).json() == []  # a key's own list does not hold the visitor's booking
 
 
 async def test_the_mcp_server_can_be_turned_off(settings: Settings, client: httpx.AsyncClient) -> None:

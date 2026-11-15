@@ -23,6 +23,7 @@ Report a vulnerability privately to rafiseniangwangsa@gmail.com, not in a public
 | A forged confirmation id, or one prepared by someone else | It is signed by the service and carries its owner. A changed, expired or foreign one books nothing | `BookingQuotes.read` |
 | The chat agent doing more than its user may | The agent has no key that can book. It forwards the user's own cookie or key, so the API sees the user | tiketa-booking-agent |
 | Reading someone else's bookings | Each belongs to its caller, also when filtered by a conversation id | `app/repositories/cinema.py` |
+| Visitors' assistants seeing each other's bookings on a public MCP server | Callers without a key are one caller, so they get no list. A booking is read back only with its code, and a code opens only the caller's own | `app/mcp/server.py` |
 | One caller flooding the service | 60 requests a minute per caller on `/v1` and `/mcp`, counted in Redis across workers | `app/middleware/rate_limit.py` |
 | API keys in logs or Redis | Callers are named by a SHA-256 prefix of their key. Keys are compared in constant time and several can be active, for rotation | `app/middleware/rate_limit.py` |
 | Internals in error messages | HTTP errors are problem+json with a short detail and a request id. MCP tools return a refusal's reason and mask anything unexpected. Stack traces go to the logs only | `app/core/errors.py`, `app/mcp/server.py` |
@@ -40,6 +41,11 @@ Report a vulnerability privately to rafiseniangwangsa@gmail.com, not in a public
   bookings, each still paid at the counter. A CAPTCHA on `/auth/guest` would raise the bar.
 - MCP clients authenticate with an API key as a bearer token. OAuth, which the MCP specification describes for
   remote servers, is not implemented, so a key is given to a person by hand.
+- With `MCP_PUBLIC=true` anyone can book over MCP without a key, as anyone can with a guest session on the web. A
+  booking code is 32 random bits. At the shared limit, finding one given booking by guessing takes about seven
+  million minutes on average, and hitting any one of a thousand takes about five days, so codes should grow
+  longer before real use. Fake bookings
+  that fill a showtime are possible, as on the web, and are each still paid at the counter.
 - FastMCP is at 4.1.4. Newer patch releases exist and are taken once they are 14 days old.
 - Names on bookings are stored as typed. There is no retention period: nothing is deleted, by design, so the data
   can be studied later. A public deployment needs a notice that it is a demonstration.

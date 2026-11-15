@@ -64,7 +64,8 @@ no model runs on this side.
 | `get_seat_map` | A showtime's seats as text, taken ones marked |
 | `prepare_booking` | Checks a booking and returns its summary, total and a confirmation id. Nothing is booked or held |
 | `confirm_booking` | Books a prepared booking. Calling it twice with the same id books once |
-| `list_my_bookings` | The caller's latest bookings |
+| `get_booking` | One booking, by its booking code |
+| `list_my_bookings` | The caller's latest bookings. Only for callers with a key |
 
 Booking takes two calls so a person can read the price before anything is booked. The confirmation id is the
 prepared booking itself, signed by the service and valid for 10 minutes: nothing is stored, and the seats are checked
@@ -78,11 +79,16 @@ Try it with the API running:
 With `API_KEYS` set, clients send a key as a bearer token and are limited per minute like any other caller.
 OAuth for MCP clients is not implemented.
 
-The web app's side panel has "Copy setup instructions": English text a visitor pastes into their own assistant. It
-gives the server's URL and the steps for Claude Code, editors that read an MCP configuration, Claude and ChatGPT, and
-says when the address is on the visitor's own computer, which Claude and ChatGPT cannot reach because they connect
-from their own servers. The visitor can read the text before copying it. The panel shows it only while `/meta`
-reports the MCP server on.
+`MCP_PUBLIC=true` opens `/mcp` to callers without a key, so a visitor's own Claude or ChatGPT can book. Those
+callers are one anonymous caller with one shared limit (`MCP_PUBLIC_RATE_LIMIT_PER_MINUTE`), so `list_my_bookings`
+is not offered to them: it would show each visitor the others' names and booking codes. A booking is read back with
+`get_booking` and its code, the same code that pays at the counter. With keys, a code opens only the caller's own
+booking.
+
+The web app's side panel has "Copy instructions": English text a visitor pastes into Claude or ChatGPT. It gives the
+server's URL and the steps for Claude Code, editors that read an MCP configuration, Claude and ChatGPT, and says
+when the address is on the visitor's own computer, which Claude and ChatGPT cannot reach because they connect from
+their own servers. The panel shows it only while `/meta` reports the MCP server on.
 
 ## Run
 
