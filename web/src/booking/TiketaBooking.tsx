@@ -73,7 +73,7 @@ function CinemaPhoto() {
   return (
     <figure className="tk-photo">
       <img
-        src="/media/tiketa-cinema-batavia-1930s.webp"
+        src={`${import.meta.env.BASE_URL}media/tiketa-cinema-batavia-1930s.webp`}
         alt="A full cinema hall in Batavia in the 1930s, the audience seated on both sides of one central aisle"
         width={1600}
         height={701}
