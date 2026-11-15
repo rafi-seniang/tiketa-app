@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { type Booking, core, type SeatMap as SeatMapData, TiketaError, unwrap } from "../api/core";
-import { cinemaDay, rupiah, whenLabel } from "./format";
+import { cinemaDay, freePrice, rupiah, whenLabel } from "./format";
 import { fetchSeats, keys, useCinema } from "./queries";
 import { Link } from "./router";
 import { SeatMap, SeatMapPlaceholder } from "./SeatMap";
@@ -184,9 +184,9 @@ export function SeatsScreen({ id, heldByChat }: { id: number; heldByChat: string
               </span>
               <span className="tk-choice-total num">
                 {selected.length === 0
-                  ? `Up to ${maxSeats} seats, ${price ? rupiah(price) : "-"} each`
+                  ? `Up to ${maxSeats} seats, ${price ? freePrice(price) : "-"} each`
                   : `${selected.length} x ${rupiah(price)} = `}
-                {selected.length > 0 && <b>{rupiah(selected.length * price)}</b>}
+                {selected.length > 0 && <b>{freePrice(selected.length * price)}</b>}
               </span>
             </div>
             <div className="field tk-name">
@@ -215,9 +215,8 @@ export function SeatsScreen({ id, heldByChat }: { id: number; heldByChat: string
           {notice?.kind === "booked" && (
             <p className="tk-notice" data-kind="booked" role="status">
               Booked <strong className="tk-code">{notice.booking.code}</strong>: {notice.booking.seats.join(", ")} for{" "}
-              {notice.booking.showtime.movie_title}, {whenLabel(notice.booking.showtime.starts_at)}. Pay{" "}
-              {rupiah(notice.booking.total_price_idr)} at the counter with the code.{" "}
-              <Link to={{ name: "tickets" }}>See my tickets</Link>
+              {notice.booking.showtime.movie_title}, {whenLabel(notice.booking.showtime.starts_at)}. Free in this demo:
+              show the code at the counter. <Link to={{ name: "tickets" }}>See my tickets</Link>
             </p>
           )}
           {notice?.kind === "refused" && (

@@ -3,13 +3,13 @@
 from datetime import date, timedelta
 
 import httpx
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from app.core.database import Sessions
 from app.models.cinema import MovieRow, ShowtimeRow
 from app.repositories.cinema import CinemaStore
 from app.schemas.cinema import BookingRequest, Showtime
-from app.services.weekly_schedule import publish_week
+from app.services.weekly_schedule import TICKET_PRICE_IDR, publish_week
 from app.utils.clock import week_days
 
 from conftest import CINEMA_TIMEZONE, DUNE, NOW, TODAY
@@ -54,6 +54,15 @@ async def test_a_film_already_published_takes_the_catalogue_again(sessions: Sess
         film = await db.scalar(select(MovieRow).where(MovieRow.id == DUNE))
     assert film is not None and film.synopsis.startswith("Paul Atreides joins Chani")
     assert film.backdrop_url and film.backdrop_url.endswith(".jpg")
+
+
+async def test_a_week_published_under_an_older_price_takes_the_current_one(sessions: Sessions) -> None:
+    async with sessions.begin() as db:
+        await db.execute(update(ShowtimeRow).values(price_idr=45_000))
+    await publish_week(sessions, TODAY, CINEMA_TIMEZONE)
+    async with sessions() as db:
+        prices = set(await db.scalars(select(ShowtimeRow.price_idr)))
+    assert prices == {TICKET_PRICE_IDR}
 
 
 async def test_the_next_week_is_added_and_the_old_week_stays_with_its_bookings(

@@ -14,6 +14,8 @@ const dayFormat = new Intl.DateTimeFormat("en-GB", {
 const isoDayFormat = new Intl.DateTimeFormat("en-CA", { timeZone: CINEMA_TIMEZONE });
 
 export const rupiah = (amount: number) => `Rp${rupiahFormat.format(amount)}`;
+/** Every price on the demo site: what a ticket would cost, and that it costs nothing here. */
+export const freePrice = (amount: number) => `${rupiah(amount)} (free)`;
 export const clockTime = (iso: string) => timeFormat.format(new Date(iso));
 export const dayLabel = (iso: string) => dayFormat.format(new Date(iso));
 export const whenLabel = (iso: string) => `${dayLabel(iso)}, ${clockTime(iso)} WIB`;

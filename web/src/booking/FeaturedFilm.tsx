@@ -1,5 +1,5 @@
 import type { Movie, Showtime } from "../api/core";
-import { backdropAt, clockTime, rupiah } from "./format";
+import { backdropAt, clockTime, freePrice } from "./format";
 import { Link } from "./router";
 
 /** Today's featured film: its wide still, its story and every showing still to come today, one click from the seats. */
@@ -17,7 +17,7 @@ export function FeaturedFilm({ movie, times }: { movie: Movie; times: Showtime[]
         <h2 id="tk-feature-title">{movie.title}</h2>
         <p className="tk-film-facts">
           {movie.release_year} · {movie.genres.join(", ")}
-          {times[0] ? ` · ${rupiah(times[0].price_idr)}` : ""}
+          {times[0] ? ` · ${freePrice(times[0].price_idr)}` : ""}
         </p>
         <p className="tk-feature-story">{movie.synopsis}</p>
         <ul className="tk-film-times" aria-label={`Showings of ${movie.title} today`}>
