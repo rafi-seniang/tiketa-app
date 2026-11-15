@@ -69,27 +69,6 @@ function Mark({ size }: { size: number }) {
   );
 }
 
-function CinemaPhoto() {
-  return (
-    <figure className="tk-photo">
-      <img
-        src={`${import.meta.env.BASE_URL}media/tiketa-cinema-batavia-1930s.webp`}
-        alt="A full cinema hall in Batavia in the 1930s, the audience seated on both sides of one central aisle"
-        width={1600}
-        height={701}
-        loading="lazy"
-      />
-      <figcaption>
-        Bioscoop Globe or Rex, Batavia, 1930s.{" "}
-        <a href="https://commons.wikimedia.org/w/index.php?curid=103672528" target="_blank" rel="noreferrer">
-          KITLV 115145
-        </a>
-        , CC BY 4.0
-      </figcaption>
-    </figure>
-  );
-}
-
 function Poster({ movie }: { movie: Movie }) {
   const [failed, setFailed] = useState(false);
   const source = posterAt(movie, 160);
@@ -422,7 +401,6 @@ export function TiketaBooking() {
           {mcpPath && <AssistantSetup mcpUrl={`${CORE_URL}${mcpPath}/`} />}
         </>
       }
-      sidebarFooter={<CinemaPhoto />}
       className="tiketa"
     >
       <div className="tk-layout" data-view={view}>

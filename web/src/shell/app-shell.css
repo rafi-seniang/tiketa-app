@@ -151,9 +151,6 @@ table,
   background: var(--active);
   color: var(--text);
 }
-.sidebar .bottom {
-  margin-top: auto;
-}
 .canvas {
   min-width: 0;
   padding: var(--pad);
