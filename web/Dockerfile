@@ -10,7 +10,8 @@ ARG VITE_TIKETA_API_URL=
 ARG VITE_TIKETA_AGENT_URL=
 # The path the site is served under, with both slashes, such as /tiketa/. Empty serves it at the root.
 ARG VITE_BASE_PATH=
-ENV VITE_TIKETA_API_URL=${VITE_TIKETA_API_URL} VITE_TIKETA_AGENT_URL=${VITE_TIKETA_AGENT_URL} \n    VITE_BASE_PATH=${VITE_BASE_PATH}
+ENV VITE_TIKETA_API_URL=${VITE_TIKETA_API_URL} VITE_TIKETA_AGENT_URL=${VITE_TIKETA_AGENT_URL}
+ENV VITE_BASE_PATH=${VITE_BASE_PATH}
 RUN npm run build
 
 # Static files only: no Node at runtime, nginx runs as a non-root user on 8080.
