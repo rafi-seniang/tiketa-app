@@ -114,7 +114,7 @@ export function TiketaApp() {
       <footer className="tk-foot">
         <div className="tk-foot-cinema">
           <strong>{cinema.data?.name ?? "Tiketa Cinema"}</strong>
-          <span>Jakarta, times in WIB. Pay at the counter with your booking code.</span>
+          <span>Jakarta, times in WIB. Tickets are free in this demo: show your booking code at the counter.</span>
           <span>
             Chat agent {agentStatus === "on" ? "on" : agentStatus === "off" ? "off" : "checking"}, MCP server{" "}
             {meta.data ? (mcpPath ? "on" : "off") : "checking"}

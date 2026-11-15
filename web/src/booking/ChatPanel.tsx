@@ -1,6 +1,6 @@
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { BookingSummary, TokenUsage } from "../api/agent";
-import { rupiah, whenLabel } from "./format";
+import { freePrice, rupiah, whenLabel } from "./format";
 import type { ChatLine } from "./useChat";
 
 const STARTERS = [
@@ -165,7 +165,7 @@ export function ChatPanel(props: ChatPanelProps) {
                 Ask in Indonesian or English, all at once or one step at a time. The agent reads the same showtimes and
                 seat map as the site, and works out dates like besok or malam minggu from today in Jakarta.
               </p>
-              <p>Nothing is booked until you confirm the summary it shows. Pay at the counter with the booking code.</p>
+              <p>Nothing is booked until you confirm the summary it shows. Tickets are free in this demo.</p>
             </div>
             {STARTERS.map((starter) => (
               <button
@@ -190,7 +190,7 @@ export function ChatPanel(props: ChatPanelProps) {
                   {booking.showtime.movie_title}, {whenLabel(booking.showtime.starts_at)}
                 </span>
                 <span className="num">
-                  {booking.seats.join(", ")} · {rupiah(booking.total_price_idr)}
+                  {booking.seats.join(", ")} · {freePrice(booking.total_price_idr)}
                 </span>
               </div>
             );
@@ -238,7 +238,8 @@ export function ChatPanel(props: ChatPanelProps) {
             <div>
               <dt>Total</dt>
               <dd className="num">
-                {pending.seats.length} x {rupiah(pending.price_per_seat_idr)} = <b>{rupiah(pending.total_price_idr)}</b>
+                {pending.seats.length} x {rupiah(pending.price_per_seat_idr)} ={" "}
+                <b>{freePrice(pending.total_price_idr)}</b>
               </dd>
             </div>
           </dl>

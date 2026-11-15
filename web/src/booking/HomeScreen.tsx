@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 import type { Showtime } from "../api/core";
 import type { AgentStatus } from "./ChatPanel";
+import { FeaturedFilm } from "./FeaturedFilm";
 import { clockTime, weekDays } from "./format";
 import { Poster } from "./Poster";
 import { useCinema, useMovies, useShowtimes } from "./queries";
@@ -37,6 +38,9 @@ export function HomeScreen({
     return nextA < nextB ? -1 : nextA > nextB ? 1 : 0;
   });
   const showingsToday = showtimes.data?.length ?? 0;
+  // The featured film changes with the day, among the films that still show today and have a wide still
+  const candidates = films.filter((movie) => movie.backdrop_url && byFilm.has(movie.id));
+  const featured = candidates.length > 0 ? candidates[Number(today.slice(-2)) % candidates.length] : undefined;
 
   const ask = (event: FormEvent) => {
     event.preventDefault();
@@ -56,6 +60,8 @@ export function HomeScreen({
             : "Tiketa Cinema, Jakarta. Times in WIB."}
         </p>
       </header>
+
+      {featured && <FeaturedFilm movie={featured} times={byFilm.get(featured.id) ?? []} />}
 
       <form className="tk-ask" onSubmit={ask} aria-labelledby="tk-ask-title">
         <h2 id="tk-ask-title">Book in one sentence</h2>

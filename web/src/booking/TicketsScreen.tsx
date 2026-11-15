@@ -1,5 +1,5 @@
 import type { Booking } from "../api/core";
-import { rupiah, whenLabel } from "./format";
+import { freePrice, whenLabel } from "./format";
 import { useBookings } from "./queries";
 import { Link } from "./router";
 
@@ -20,7 +20,7 @@ export function TicketsScreen() {
             ? "Loading your bookings."
             : list.length === 0
               ? "No bookings yet."
-              : `${list.length} ${list.length === 1 ? "booking" : "bookings"}, ${rupiah(total)} to pay at the counter with each code.`}
+              : `${list.length} ${list.length === 1 ? "booking" : "bookings"}, ${freePrice(total)}. Show each code at the counter.`}
         </p>
       </header>
       {bookings.isError ? (
@@ -48,7 +48,7 @@ export function TicketsScreen() {
                 <span>{booking.customer_name}</span>
               </div>
               <div className="tk-stub-pay num">
-                <span>{rupiah(booking.total_price_idr)}</span>
+                <span>{freePrice(booking.total_price_idr)}</span>
                 <span>{CHANNEL_WORDS[booking.channel]}</span>
               </div>
             </li>

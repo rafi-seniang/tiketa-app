@@ -14,6 +14,8 @@ const dayFormat = new Intl.DateTimeFormat("en-GB", {
 const isoDayFormat = new Intl.DateTimeFormat("en-CA", { timeZone: CINEMA_TIMEZONE });
 
 export const rupiah = (amount: number) => `Rp${rupiahFormat.format(amount)}`;
+/** Every price on the demo site: what a ticket would cost, and that it costs nothing here. */
+export const freePrice = (amount: number) => `${rupiah(amount)} (free)`;
 export const clockTime = (iso: string) => timeFormat.format(new Date(iso));
 export const dayLabel = (iso: string) => dayFormat.format(new Date(iso));
 export const whenLabel = (iso: string) => `${dayLabel(iso)}, ${clockTime(iso)} WIB`;
@@ -50,4 +52,11 @@ export function posterAt(movie: Movie, width: number): string | null {
   if (url.includes("image.tmdb.org")) return url.replace("/original/", width <= 185 ? "/w185/" : "/w342/");
   if (url.includes("images.weserv.nl")) return `${url}&w=${width}&h=${Math.round(width * 1.5)}&fit=cover&output=webp`;
   return url;
+}
+
+/** A film's wide still for the banner, at 1280px wide (TMDB's originals run to several megabytes). */
+export function backdropAt(movie: Movie): string | null {
+  const url = movie.backdrop_url;
+  if (!url) return null;
+  return url.includes("image.tmdb.org") ? url.replace("/original/", "/w1280/") : url;
 }

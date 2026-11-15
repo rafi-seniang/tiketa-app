@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { clockTime, rupiah, weekDays } from "./format";
+import { clockTime, freePrice, weekDays } from "./format";
 import { Poster } from "./Poster";
 import { fetchShowtimes, keys, useCinema, useMovies, useShowtimes } from "./queries";
 import { Link } from "./router";
@@ -109,7 +109,7 @@ export function FilmScreen({ id }: { id: number }) {
                   <li key={showtime.id}>
                     <Link to={{ name: "seats", id: showtime.id }} className="tk-time">
                       <strong className="num">{clockTime(showtime.starts_at)}</strong>
-                      <span className="num">{rupiah(showtime.price_idr)}</span>
+                      <span className="num">{freePrice(showtime.price_idr)}</span>
                       <span className="num" data-low={showtime.seats_left <= 20 || undefined}>
                         {showtime.seats_left} seats left
                       </span>

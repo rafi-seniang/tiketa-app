@@ -21,6 +21,8 @@ class MovieRow(Base):
     genres: Mapped[list[str]] = mapped_column(JSON)
     studio_number: Mapped[int] = mapped_column(unique=True)
     poster_url: Mapped[str | None] = mapped_column(String(300))
+    # A wide still for the banner on Now showing
+    backdrop_url: Mapped[str | None] = mapped_column(String(300))
     trailer_youtube_id: Mapped[str | None] = mapped_column(String(20))
 
 
