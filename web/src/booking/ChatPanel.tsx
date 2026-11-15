@@ -91,6 +91,7 @@ interface ChatPanelProps {
   onAnswer: (approved: boolean) => void;
   onShowOnMap: (summary: BookingSummary) => void;
   onRestart: () => void;
+  onClose: () => void;
 }
 
 const tokens = new Intl.NumberFormat("en-US");
@@ -132,16 +133,21 @@ export function ChatPanel(props: ChatPanelProps) {
                 : "Tokens today -"}
           </p>
         </div>
-        <button type="button" className="btn ghost" onClick={props.onRestart} disabled={busy || status !== "on"}>
-          New chat
-        </button>
+        <div className="tk-chat-actions">
+          <button type="button" className="btn ghost" onClick={props.onRestart} disabled={busy || status !== "on"}>
+            New chat
+          </button>
+          <button type="button" className="btn ghost" onClick={props.onClose}>
+            Close
+          </button>
+        </div>
       </header>
 
       <div className="tk-log" ref={log} aria-live="polite">
         {status === "off" && (
           <div className="tk-intro">
             <p>The booking agent is off right now. It is a separate service, and the cinema runs without it.</p>
-            <p>Choose a film, a time and your seats on the seat map. This panel comes back when the agent does.</p>
+            <p>Choose a film, a time and your seats on the seat map. The chat comes back when the agent does.</p>
           </div>
         )}
         {status === "on" && startError && (
@@ -157,7 +163,7 @@ export function ChatPanel(props: ChatPanelProps) {
             <div className="tk-intro">
               <p>
                 Ask in Indonesian or English, all at once or one step at a time. The agent reads the same showtimes and
-                seat map as the form, and works out dates like besok or malam minggu from today in Jakarta.
+                seat map as the site, and works out dates like besok or malam minggu from today in Jakarta.
               </p>
               <p>Nothing is booked until you confirm the summary it shows. Pay at the counter with the booking code.</p>
             </div>
@@ -208,7 +214,7 @@ export function ChatPanel(props: ChatPanelProps) {
             <strong>{pending.movie_title}</strong>
             {pending.showtime_id != null && (
               <button type="button" className="tk-link" onClick={() => props.onShowOnMap(pending)}>
-                Show on map
+                Show on the seat map
               </button>
             )}
           </div>

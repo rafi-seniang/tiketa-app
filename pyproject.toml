@@ -13,6 +13,8 @@ dependencies = [
     "psycopg[binary]>=3.3",
     "aiosqlite>=0.22",
     "redis>=8.0",
+    # Draws the seat map picture the MCP tools return
+    "pillow>=12",
     # Pinned exactly: FastMCP follows a fast-moving protocol and asks for exact pins. A new version is taken on
     # purpose, once it has been public for 14 days.
     "fastmcp==4.1.4",

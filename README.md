@@ -24,7 +24,8 @@ v1 (tag `v1.0`, 2025) was a Flask app with server-rendered pages. This is v2.
 
 Live at [rafilab.com/tiketa](https://rafilab.com/tiketa/), with the MCP server at
 `https://rafilab.com/tiketa/api/mcp/`. How it is deployed: [lab-deploy](https://github.com/rafi-seniang/lab-deploy).
-The web app is served under a path there (`VITE_BASE_PATH=/tiketa/` at build time).
+The web app is served under a path there (`VITE_BASE_PATH=/tiketa/` at build time). Its screens have their own
+addresses (`/tiketa/film/9`, `/tiketa/showtime/117`, `/tiketa/tickets`); nginx answers every path with the app.
 
 ## What holds, whoever books
 
@@ -89,7 +90,7 @@ is not offered to them: it would show each visitor the others' names and booking
 `get_booking` and its code, the same code that pays at the counter. With keys, a code opens only the caller's own
 booking.
 
-The web app's side panel has "Copy instructions": English text a visitor pastes into Claude or ChatGPT. It gives the
+The web app's footer has "Copy instructions": English text a visitor pastes into Claude or ChatGPT. It gives the
 server's URL and the steps for Claude Code, editors that read an MCP configuration, Claude and ChatGPT, and says
 when the address is on the visitor's own computer, which Claude and ChatGPT cannot reach because they connect from
 their own servers. The panel shows it only while `/meta` reports the MCP server on.
@@ -152,4 +153,5 @@ is set. Threats and answers are in [SECURITY.md](SECURITY.md), decisions in
     scripts/                    publish_week.py and its cron line
     migrations/                 Alembic
     tests/                      the store, the API, the week, the MCP server over memory and HTTP, the migrations
-    web/                        the React web app: seat map, booking form, the chat panel for the agent
+    web/                        the React web app: films now showing, a film's week, the seat map and checkout, my
+                                tickets, and the agent as a floating chat on every screen
