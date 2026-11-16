@@ -5,7 +5,8 @@ app with a seat map, and an MCP server so assistants such as Claude can book too
 a separate service.
 
 The booking service is the product. The two AI entry points are add-ons on the same API and the same rules, and
-either can be off without anything else noticing.
+either can be off without anything else noticing. On rafilab.com it is a demo: prices show what a ticket would cost,
+and every ticket is free.
 
     web app (React)  ─────────────►  booking API (FastAPI)  ──►  PostgreSQL
                                         ▲          ▲              films, showtimes, seats, bookings
@@ -66,8 +67,8 @@ no model runs on this side.
 | `get_cinema` | The cinema's current date and time, the seat limit and the week on sale |
 | `list_films` | Every film showing |
 | `find_showtimes` | One day's showtimes that have not started, with price and seats left |
-| `get_seat_map` | A showtime's seats as text, taken ones marked |
-| `prepare_booking` | Checks a booking and returns its summary, total and a confirmation id. Nothing is booked or held |
+| `get_seat_map` | A showtime's seats as text and a picture, taken ones marked |
+| `prepare_booking` | Checks a booking and returns its summary, total, a confirmation id and a seat picture. Nothing is booked or held |
 | `confirm_booking` | Books a prepared booking. Calling it twice with the same id books once |
 | `get_booking` | One booking, by its booking code |
 | `list_my_bookings` | The caller's latest bookings. Only for callers with a key |
@@ -81,19 +82,18 @@ Try it with the API running:
     claude mcp add --transport http tiketa http://127.0.0.1:8070/mcp/     # Claude Code
     npx @modelcontextprotocol/inspector                                    # then connect to the same URL
 
-With `API_KEYS` set, clients send a key as a bearer token and are limited per minute like any other caller.
-OAuth for MCP clients is not implemented.
+With `API_KEYS` set, clients send a key as a bearer token and are limited per minute like any other caller. OAuth for
+MCP clients is not implemented.
 
-`MCP_PUBLIC=true` opens `/mcp` to callers without a key, so a visitor's own Claude or ChatGPT can book. Those
-callers are one anonymous caller with one shared limit (`MCP_PUBLIC_RATE_LIMIT_PER_MINUTE`), so `list_my_bookings`
-is not offered to them: it would show each visitor the others' names and booking codes. A booking is read back with
-`get_booking` and its code, the same code that pays at the counter. With keys, a code opens only the caller's own
-booking.
+`MCP_PUBLIC=true` opens `/mcp` to callers without a key, so a visitor's own chatbot (Claude, ChatGPT, an editor) can
+book. Those callers are one anonymous caller with one shared limit (`MCP_PUBLIC_RATE_LIMIT_PER_MINUTE`), so
+`list_my_bookings` is not offered to them: it would show each visitor the others' names and codes. A booking is read
+back with `get_booking` and its code.
 
-The web app's footer has "Copy instructions": English text a visitor pastes into Claude or ChatGPT. It gives the
-server's URL and the steps for Claude Code, editors that read an MCP configuration, Claude and ChatGPT, and says
-when the address is on the visitor's own computer, which Claude and ChatGPT cannot reach because they connect from
-their own servers. The panel shows it only while `/meta` reports the MCP server on.
+The web app's home page has a "Try it" band under the top bar: the server's URL, a button that copies one set of
+instructions to paste into any chatbot, and the steps to add the server in each app. The band shows only while `/meta`
+reports the MCP server on. Behind Cloudflare, Browser Integrity Check must be off for the MCP path, or clients that
+send an unusual User-Agent (Python's, for one) are refused with error 1010.
 
 ## Run
 
@@ -112,7 +112,7 @@ Without Docker, set `DATABASE_URL=sqlite+aiosqlite:///./tiketa.db` and an empty 
 `127.0.0.1` rather than `localhost` in the service's own URLs (`localhost` tries IPv6 first and stalls). Open the web
 app on `localhost`, the host its API addresses use, so the guest cookie reaches the API and the chat agent alike.
 
-    make check                    # ruff, mypy strict, 47 tests on SQLite with no services, 90% coverage floor
+    make check                    # ruff, mypy strict, 50 tests on SQLite with no services, 90% coverage floor
     make test-postgres            # the same tests on PostgreSQL, as CI also runs them
     cd web && npm run lint && npm test && npm run build
 
@@ -123,7 +123,7 @@ app on `localhost`, the host its API addresses use, so the guest cookie reaches 
 | `GET /v1/cinema` | Name, clock, seat limit, and the week on sale with whether it is published |
 | `GET /v1/movies`, `GET /v1/movies/{id}` | Films |
 | `GET /v1/showtimes?day=&movie_id=`, `GET /v1/showtimes/{id}` | Showtimes that have not started, with seats left |
-| `GET /v1/showtimes/{id}/seats` | The seat map: rows, taken seats, the aisle and the walkway |
+| `GET /v1/showtimes/{id}/seats` | The seat map: rows, taken seats (with the first letter of the booker's name), the aisle and the walkway |
 | `POST /v1/bookings` | Book `showtime_id`, `seats`, `customer_name` with an `Idempotency-Key` header |
 | `GET /v1/bookings` | The caller's latest bookings, newest first, each with its channel |
 | `GET /v1/me` | How the service names the caller. The chat agent asks this |
