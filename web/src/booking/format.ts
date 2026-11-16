@@ -45,12 +45,18 @@ export function weekDays(week: Cinema["week"]): WeekDay[] {
   });
 }
 
-/** A poster at the size the screen shows it: the full-size originals are 1 to 3 MB each. */
-export function posterAt(movie: Movie, width: number): string | null {
+// The widths TMDB serves a poster at, short of the original (1 to 3 MB each)
+const TMDB_POSTER_WIDTHS = [185, 342, 500, 780];
+
+/** A poster file at least `pixels` wide, the smallest that is, so it stays sharp without the full original. */
+export function posterAt(movie: Movie, pixels: number): string | null {
   const url = movie.poster_url;
   if (!url) return null;
-  if (url.includes("image.tmdb.org")) return url.replace("/original/", width <= 185 ? "/w185/" : "/w342/");
-  if (url.includes("images.weserv.nl")) return `${url}&w=${width}&h=${Math.round(width * 1.5)}&fit=cover&output=webp`;
+  if (url.includes("image.tmdb.org")) {
+    const size = TMDB_POSTER_WIDTHS.find((width) => width >= pixels) ?? 780;
+    return url.replace("/original/", `/w${size}/`);
+  }
+  if (url.includes("images.weserv.nl")) return `${url}&w=${pixels}&h=${Math.round(pixels * 1.5)}&fit=cover&output=webp`;
   return url;
 }
 

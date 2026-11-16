@@ -132,6 +132,7 @@ export function ChatPanel(props: ChatPanelProps) {
                 ? `${tokens.format(usage.used_tokens)} of ${tokens.format(usage.daily_tokens)} tokens today`
                 : "Tokens today -"}
           </p>
+          <p className="tk-chat-demo">Demo: every ticket is free</p>
         </div>
         <div className="tk-chat-actions">
           <button type="button" className="btn ghost" onClick={props.onRestart} disabled={busy || status !== "on"}>
@@ -165,7 +166,10 @@ export function ChatPanel(props: ChatPanelProps) {
                 Ask in Indonesian or English, all at once or one step at a time. The agent reads the same showtimes and
                 seat map as the site, and works out dates like besok or malam minggu from today in Jakarta.
               </p>
-              <p>Nothing is booked until you confirm the summary it shows. Tickets are free in this demo.</p>
+              <p>
+                Nothing is booked until you confirm the summary it shows. This is a demo cinema: the prices are what a
+                ticket would cost, and nothing is ever paid.
+              </p>
             </div>
             {STARTERS.map((starter) => (
               <button
@@ -210,40 +214,42 @@ export function ChatPanel(props: ChatPanelProps) {
 
       {pending && (
         <section className="tk-summary" aria-label="Booking waiting for your answer">
-          <div className="tk-summary-top">
-            <strong>{pending.movie_title}</strong>
-            {pending.showtime_id != null && (
-              <button type="button" className="tk-link" onClick={() => props.onShowOnMap(pending)}>
-                Show on the seat map
-              </button>
-            )}
+          <div className="tk-summary-body">
+            <div className="tk-summary-top">
+              <strong>{pending.movie_title}</strong>
+              {pending.showtime_id != null && (
+                <button type="button" className="tk-link" onClick={() => props.onShowOnMap(pending)}>
+                  Show on the seat map
+                </button>
+              )}
+            </div>
+            <dl>
+              <div>
+                <dt>When</dt>
+                <dd>{whenLabel(pending.starts_at)}</dd>
+              </div>
+              <div>
+                <dt>Studio</dt>
+                <dd className="num">{pending.studio_number}</dd>
+              </div>
+              <div>
+                <dt>Seats</dt>
+                <dd className="num">{pending.seats.join(", ")}</dd>
+              </div>
+              <div>
+                <dt>Name</dt>
+                <dd>{pending.customer_name}</dd>
+              </div>
+              <div>
+                <dt>Total</dt>
+                <dd className="num">
+                  {pending.seats.length} x {rupiah(pending.price_per_seat_idr)} ={" "}
+                  <b>{freePrice(pending.total_price_idr)}</b>
+                </dd>
+              </div>
+            </dl>
+            {props.pendingSeatMap && <SeatMiniMap seats={pending.seats} seatMap={props.pendingSeatMap} />}
           </div>
-          <dl>
-            <div>
-              <dt>When</dt>
-              <dd>{whenLabel(pending.starts_at)}</dd>
-            </div>
-            <div>
-              <dt>Studio</dt>
-              <dd className="num">{pending.studio_number}</dd>
-            </div>
-            <div>
-              <dt>Seats</dt>
-              <dd className="num">{pending.seats.join(", ")}</dd>
-            </div>
-            <div>
-              <dt>Name</dt>
-              <dd>{pending.customer_name}</dd>
-            </div>
-            <div>
-              <dt>Total</dt>
-              <dd className="num">
-                {pending.seats.length} x {rupiah(pending.price_per_seat_idr)} ={" "}
-                <b>{freePrice(pending.total_price_idr)}</b>
-              </dd>
-            </div>
-          </dl>
-          {props.pendingSeatMap && <SeatMiniMap seats={pending.seats} seatMap={props.pendingSeatMap} />}
           <div className="tk-summary-actions">
             <button type="button" className="btn primary" disabled={busy} onClick={() => props.onAnswer(true)}>
               Confirm booking

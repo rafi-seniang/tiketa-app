@@ -221,9 +221,12 @@ textarea:disabled {
 
 /* ---------- the frame: top bar, page, footer ---------- */
 .tk-site {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+}
+.tk-site > .tk-main {
+  flex: 1;
 }
 .tk-top {
   display: flex;
@@ -324,7 +327,6 @@ textarea:disabled {
 }
 .tk-foot {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
   gap: 32px;
   padding: 32px max(var(--margin), calc((100vw - var(--content)) / 2)) 96px;
   border-top: 1px solid var(--border);
@@ -339,24 +341,96 @@ textarea:disabled {
   color: var(--text);
   font-weight: 600;
 }
-.tk-assistant {
+/* The MCP band under the top bar: the one place amber outlines a control area, so a visitor sees it first */
+.tk-try {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
+  gap: 16px 40px;
+  align-items: start;
+  width: calc(100% - 2 * var(--margin));
+  max-width: var(--content);
+  margin: 24px auto 0;
+  padding: var(--pad);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.tk-try-about {
   display: grid;
   justify-items: start;
-  gap: 8px;
+  gap: 6px;
 }
-.tk-assistant h2 {
-  color: var(--text);
-  font-size: var(--fs-body);
+.tk-try-label {
+  padding: 2px 10px;
+  border-radius: var(--radius-control);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: var(--fs-small);
   font-weight: 600;
 }
-.tk-assistant-status:empty {
-  display: none;
+.tk-try h2 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
 }
-.tk-assistant pre {
+.tk-try-about p {
+  color: var(--muted);
+}
+.tk-try-actions {
+  display: grid;
+  gap: 10px;
+}
+.tk-try-actions > .btn {
+  justify-self: start;
+}
+.tk-try-url {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 4px 14px;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-control);
+  background: var(--ground);
+}
+.tk-try-url code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.tk-try-steps summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.tk-try-steps summary:hover {
+  color: var(--text);
+}
+.tk-try-steps dl {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 8px;
+}
+.tk-try-steps dt {
+  font-weight: 600;
+}
+.tk-try-steps dd {
+  margin: 0;
+  color: var(--muted);
+}
+.tk-try-steps p {
+  color: var(--faint);
+  font-size: var(--fs-small);
+}
+.tk-try pre {
   max-width: 100%;
   overflow: auto;
   white-space: pre-wrap;
   font-size: var(--fs-small);
+}
+.tk-demo-note {
+  color: var(--text);
 }
 
 /* ---------- home: the one-sentence booking, then the films ---------- */
@@ -753,11 +827,11 @@ textarea:disabled {
     color var(--t-hover) ease,
     transform var(--t-press) var(--ease-out);
 }
-.tk-seat:hover:not(:disabled) {
+.tk-seat:hover:not(:disabled, [data-state="taken"]) {
   background: #4a4a4a;
   color: var(--text);
 }
-.tk-seat:active:not(:disabled) {
+.tk-seat:active:not(:disabled, [data-state="taken"]) {
   transform: scale(0.9);
 }
 .tk-seat[data-state="taken"] {
@@ -786,6 +860,14 @@ textarea:disabled {
   .tk-seat[data-state] {
     color: transparent; /* numbers return when the room is zoomed */
   }
+}
+/* A taken seat shows the first letter of its booking's name under the pointer, or after a tap */
+.tk-seat[data-state="taken"]:hover,
+.tk-seat[data-state="taken"]:focus-visible,
+.tk-seat[data-state="taken"]:focus {
+  border-color: var(--muted);
+  color: var(--text);
+  font-weight: 600;
 }
 /* The room on the left, the booking on the right and in view: 1200 = 866 + 14 + 320 */
 .tk-seats-layout {
@@ -907,8 +989,8 @@ textarea:disabled {
 .tk-chat {
   display: flex;
   flex-direction: column;
-  width: min(420px, calc(100vw - 48px));
-  height: min(680px, calc(100vh - 112px));
+  width: min(440px, calc(100vw - 48px));
+  height: min(860px, calc(100vh - 48px));
   border: 1px solid var(--edge);
   border-radius: var(--radius-card);
   background: var(--surface);
@@ -916,6 +998,7 @@ textarea:disabled {
   overflow: hidden;
 }
 .tk-chat-head {
+  flex-shrink: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -935,6 +1018,10 @@ textarea:disabled {
   color: var(--faint);
   font-size: var(--fs-small);
 }
+.tk-chat-demo {
+  color: var(--accent);
+  font-size: var(--fs-small);
+}
 .tk-chat-actions {
   display: flex;
 }
@@ -947,6 +1034,7 @@ textarea:disabled {
   flex: 1;
   flex-direction: column;
   gap: 10px;
+  min-height: 140px; /* the conversation always keeps room, however long the summary below it */
   padding: 16px 18px;
   overflow-y: auto;
 }
@@ -1003,12 +1091,23 @@ textarea:disabled {
   font-size: 16px;
 }
 .tk-summary {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 1;
   gap: 10px;
+  min-height: 0;
+  max-height: 62%;
   margin: 0 12px 12px;
   padding: 14px;
   border-radius: var(--radius-nested);
   background: var(--raised);
+}
+/* The details scroll when the panel is short; the answer buttons below them stay in view */
+.tk-summary-body {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
 }
 .tk-summary-top {
   display: flex;
@@ -1017,7 +1116,7 @@ textarea:disabled {
 }
 .tk-summary dl {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 .tk-summary dl div {
   display: grid;
@@ -1032,17 +1131,19 @@ textarea:disabled {
 }
 .tk-mini-map {
   width: 100%;
-  max-width: 300px;
+  max-width: 220px;
   --surface: #3a3a3a;
   --control: transparent;
   --seat-taken: #151515;
   --muted: var(--faint);
 }
 .tk-summary-actions {
+  flex-shrink: 0;
   display: flex;
   gap: 8px;
 }
 .tk-composer {
+  flex-shrink: 0;
   display: flex;
   align-items: flex-end;
   gap: 8px;
@@ -1073,6 +1174,9 @@ textarea:disabled {
 
 /* ---------- tablet ---------- */
 @media (max-width: 1100px) {
+  .tk-try {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .tk-feature {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1193,8 +1297,8 @@ textarea:disabled {
   .tk-stub-seats {
     grid-column: 1;
   }
-  .tk-foot {
-    grid-template-columns: minmax(0, 1fr);
+  .tk-try {
+    margin-top: 16px;
   }
   .tk-chat-dock {
     right: 16px;

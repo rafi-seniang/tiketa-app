@@ -335,6 +335,8 @@ export interface components {
       id: string;
       /** Is Taken */
       is_taken: boolean;
+      /** Booked By */
+      booked_by?: string | null;
     };
     /** ServiceMeta */
     ServiceMeta: {

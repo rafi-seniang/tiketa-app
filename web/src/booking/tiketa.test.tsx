@@ -49,7 +49,10 @@ const MOVIE = {
 const SEATS = {
   showtime: SHOWTIME,
   rows: [
-    { row: "A", seats: ["A1", "A2", "A3", "A4"].map((id) => ({ id, is_taken: id === "A4" })) },
+    {
+      row: "A",
+      seats: ["A1", "A2", "A3", "A4"].map((id) => ({ id, is_taken: id === "A4", booked_by: id === "A4" ? "R" : null })),
+    },
     { row: "B", seats: ["B1", "B2", "B3", "B4"].map((id) => ({ id, is_taken: false })) },
   ],
   aisle_after_seat: 2,
@@ -175,7 +178,9 @@ test("the form books the chosen seats once, with an idempotency key", async () =
   await openSeatStep();
   await userEvent.click(await screen.findByRole("button", { name: "A1, free" }));
   await userEvent.click(screen.getByRole("button", { name: "A2, free" }));
-  expect(screen.getByRole("button", { name: "A4, taken" })).toBeDisabled();
+  const taken = screen.getByRole("button", { name: "A4, booked by R" });
+  expect(taken).toHaveAttribute("aria-disabled", "true");
+  expect(taken).toHaveTextContent("R");
   await userEvent.type(screen.getByLabelText("Name on the booking"), "Rafi");
   await userEvent.click(screen.getByRole("button", { name: "Book 2 seats" }));
 
@@ -279,9 +284,11 @@ test("a visitor copies the instructions that connect their own assistant to the 
   renderScreen();
 
   await user.click(await screen.findByRole("button", { name: "Copy instructions" }));
-  expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Copied, now paste it" })).toBeInTheDocument();
   const copied = await navigator.clipboard.readText();
-  expect(copied).toContain("MCP server URL: http://localhost:8070/mcp/");
-  expect(copied).toContain("claude mcp add --transport http tiketa http://localhost:8070/mcp/");
+  expect(copied).toContain("MCP server: http://localhost:8070/mcp/");
+  expect(copied).toContain("Call confirm_booking only after I say yes to that summary");
   expect(copied).toContain("this address is on my own computer");
+  await user.click(screen.getByText("How to add the server in your app"));
+  expect(screen.getByText(/claude mcp add --transport http tiketa http:\/\/localhost:8070\/mcp\//)).toBeVisible();
 });
