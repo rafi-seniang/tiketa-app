@@ -157,7 +157,9 @@ def build_mcp_server(
         owner: Caller,
         confirmation_id: Annotated[str, Field(description="From prepare_booking, after the person agreed")],
     ) -> Booking:
-        """Books a prepared booking and returns its booking code. Call it only after the person agreed to it."""
+        """Books a prepared booking and returns its booking code. Call it only after the person agreed to it.
+
+        Safe to repeat: the same confirmation id always returns the same booking, never a second one."""
         return await get_resources().bookings.confirm(confirmation_id, owner, get_now())
 
     @tool(READ_ONLY)
