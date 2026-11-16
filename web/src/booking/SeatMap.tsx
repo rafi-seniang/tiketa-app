@@ -40,20 +40,40 @@ export function SeatMap({ map, selected, heldByChat, full, zoomed, onToggle }: S
                 const isMine = selected.includes(seat.id);
                 const isHeld = heldByChat.includes(seat.id);
                 const state = seat.is_taken ? "taken" : isMine ? "mine" : isHeld ? "held" : "free";
-                const words = { taken: "taken", mine: "selected", held: "in the chat's summary", free: "free" }[state];
+                const bookedBy = seat.booked_by ?? "?";
+                const words = {
+                  taken: `booked by ${bookedBy}`,
+                  mine: "selected",
+                  held: "in the chat's summary",
+                  free: "free",
+                }[state];
                 return (
                   <Fragment key={seat.id}>
-                    <button
-                      type="button"
-                      className="tk-seat"
-                      data-state={state}
-                      disabled={seat.is_taken || (full && !isMine)}
-                      aria-pressed={isMine}
-                      aria-label={`${seat.id}, ${words}`}
-                      onClick={() => onToggle(seat.id)}
-                    >
-                      {seatNumber(seat.id)}
-                    </button>
+                    {seat.is_taken ? (
+                      // Not disabled, so a pointer or a tap can show the first letter of the booking's name
+                      <button
+                        type="button"
+                        className="tk-seat"
+                        data-state="taken"
+                        aria-disabled="true"
+                        aria-label={`${seat.id}, ${words}`}
+                        title={`${seat.id}, booked by ${bookedBy}`}
+                      >
+                        {bookedBy}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="tk-seat"
+                        data-state={state}
+                        disabled={full && !isMine}
+                        aria-pressed={isMine}
+                        aria-label={`${seat.id}, ${words}`}
+                        onClick={() => onToggle(seat.id)}
+                      >
+                        {seatNumber(seat.id)}
+                      </button>
+                    )}
                     {seatNumber(seat.id) === map.aisle_after_seat && <span className="tk-aisle" aria-hidden="true" />}
                   </Fragment>
                 );

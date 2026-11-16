@@ -154,7 +154,7 @@ export function SeatsScreen({ id, heldByChat }: { id: number; heldByChat: string
             <h2 id="tk-seats-title">Choose seats</h2>
             <ul className="tk-legend">
               <li data-state="free">Free</li>
-              <li data-state="taken">Taken</li>
+              <li data-state="taken">Taken (point at it for the initial)</li>
               <li data-state="mine">Yours</li>
               {heldByChat.length > 0 && <li data-state="held">In the chat's summary</li>}
             </ul>

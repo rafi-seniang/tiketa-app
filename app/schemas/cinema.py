@@ -77,6 +77,7 @@ class BookingRequest(BaseModel):
 class SeatView(BaseModel):
     id: str
     is_taken: bool
+    booked_by: str | None = None  # the first letter of the booking's name, for a taken seat
 
 
 class SeatRowView(BaseModel):

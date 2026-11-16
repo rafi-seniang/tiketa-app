@@ -1,42 +1,52 @@
 const THIS_COMPUTER = ["localhost", "127.0.0.1"];
 
+/** Where a person adds a remote MCP server, per app. Shown on the page for the person, not pasted to the assistant. */
+export const ADD_SERVER_STEPS: { app: string; steps: string }[] = [
+  {
+    app: "Claude (web or desktop)",
+    steps:
+      'Customize, Connectors, Add custom connector. Paste the URL, choose "No sign in", then switch it on in the chat.',
+  },
+  {
+    app: "ChatGPT",
+    steps: "Settings, Apps, Advanced, turn on Developer mode, then create an app with the URL and no authentication.",
+  },
+  {
+    app: "Claude Code",
+    steps: "Run claude mcp add --transport http tiketa <URL>, then start a new session.",
+  },
+  {
+    app: "Cursor, VS Code, Windsurf and others",
+    steps: 'Add a server named "tiketa" with the URL and the HTTP transport to the MCP settings, then reload.',
+  },
+];
+
 /**
- * What a visitor pastes into their own assistant (Claude, ChatGPT, an editor's agent) so it adds Tiketa's MCP server,
- * or walks them through adding it. Written to the assistant, in English. How to book is not repeated here: the
- * server sends its own instructions once it is connected.
+ * What a visitor pastes into their own assistant once Tiketa's MCP server is added there. One text for every app:
+ * how to add the server is on the page, so the assistant never has to guess which app it is in.
  */
 export function assistantSetupText(mcpUrl: string): string {
   const lines = [
-    "Please connect to Tiketa, a cinema booking service, through its MCP server, and then help me book seats.",
+    "Help me book cinema seats at Tiketa through its MCP server.",
     "",
-    `MCP server URL: ${mcpUrl}`,
-    "Transport: Streamable HTTP. No sign in is needed.",
-    "It has tools to read films, showtimes and seat maps, and to book in two steps: prepare, then confirm.",
+    `MCP server: ${mcpUrl} (Streamable HTTP, no sign in)`,
+    "Its tools: get_cinema, list_films, find_showtimes, get_seat_map, prepare_booking, confirm_booking, get_booking.",
     "",
-    "How to add it, depending on what you are:",
-    `- You can run commands on my computer (Claude Code): run "claude mcp add --transport http tiketa ${mcpUrl}".`,
-    '- You read an MCP configuration file (Cursor, VS Code and similar): add a server named "tiketa" with this URL ' +
-      "and the HTTP transport.",
-    "- You are Claude on the web, desktop or phone: you cannot add it yourself, so walk me through it. " +
-      'Customize, then Connectors, then Add, then Add custom connector. Name it Tiketa, paste the URL, choose "No ' +
-      'sign in" and add it. Then switch it on for this chat from the + button under Connectors.',
-    "- You are ChatGPT: you cannot add it yourself, so walk me through it on the web. Plugins, then the plus button, " +
-      'then Add custom MCP server. Name it Tiketa, paste the URL as the Server URL, choose "No authentication", accept ' +
-      "the warning and create it. Then install it and pick it in the chat with @. This needs a paid plan.",
-    "If a step does not match my screen, the menus have changed: ask me what I see and guide me from there.",
+    "1. Check that the Tiketa tools are available to you in this chat. If they are not, tell me so and stop: I will " +
+      "add the server and come back. Do not call the URL some other way unless I say you may.",
+    "2. Call get_cinema first for the cinema's date and time, so words like tomorrow or besok mean the right day.",
+    "3. Ask me which film, day, time and seats I want and the name for the booking. Show me the seat map.",
+    "4. Call prepare_booking and show me the summary and its total. Call confirm_booking only after I say yes to " +
+      "that summary. A yes given before I saw it does not count.",
+    "5. Give me the booking code. Confirming the same confirmation id twice returns the same booking.",
+    "",
+    "This is a demo cinema: the prices are what a ticket would cost, and nothing is paid.",
   ];
   if (THIS_COMPUTER.includes(new URL(mcpUrl).hostname)) {
     lines.push(
       "",
-      "Note: this address is on my own computer. Claude and ChatGPT connect from their own servers and cannot reach " +
-        "it, so only an assistant running on this computer can use it (Claude Code, Cursor, VS Code).",
+      "Note: this address is on my own computer, so only an assistant running on this computer can reach it.",
     );
   }
-  lines.push(
-    "",
-    "Once you are connected, call get_cinema first for the cinema's date and time. Ask me which film, day, time and " +
-      "seats I want and the name for the booking. Show me the summary and its total, and confirm the booking only " +
-      "after I say yes. I pay at the cinema's counter with the booking code.",
-  );
   return lines.join("\n");
 }

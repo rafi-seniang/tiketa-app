@@ -59,6 +59,9 @@ export function HomeScreen({
             ? `${cinema.data.name}, Jakarta. This week runs ${days[0]?.date} to ${days.at(-1)?.date}, times in WIB.`
             : "Tiketa Cinema, Jakarta. Times in WIB."}
         </p>
+        <p className="tk-demo-note">
+          A demo cinema. Prices show what a ticket would cost, and every ticket is free: nothing is ever paid.
+        </p>
       </header>
 
       {featured && <FeaturedFilm movie={featured} times={byFilm.get(featured.id) ?? []} />}

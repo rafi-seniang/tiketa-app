@@ -113,9 +113,22 @@ class CinemaStore:
 
     async def seat_map(self, showtime_id: int) -> SeatMap:
         showtime = await self.get_showtime(showtime_id)
-        taken = await self.taken_seat_ids(showtime_id)
+        async with self._sessions() as db:
+            booked = await db.execute(
+                select(BookedSeatRow.seat_id, BookingRow.customer_name)
+                .join(BookingRow, BookingRow.id == BookedSeatRow.booking_id)
+                .where(BookedSeatRow.showtime_id == showtime_id)
+            )
+            # Only the first letter of the name: enough to tell bookings apart, too little to name a stranger
+            initials = {seat_id: name.strip()[:1].upper() or "?" for seat_id, name in booked.all()}
         rows = [
-            SeatRowView(row=row, seats=[SeatView(id=seat_id, is_taken=seat_id in taken) for seat_id in seat_ids])
+            SeatRowView(
+                row=row,
+                seats=[
+                    SeatView(id=seat_id, is_taken=seat_id in initials, booked_by=initials.get(seat_id))
+                    for seat_id in seat_ids
+                ],
+            )
             for row, seat_ids in seat_rows()
         ]
         return SeatMap(showtime=showtime, rows=rows)

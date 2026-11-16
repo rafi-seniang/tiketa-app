@@ -33,6 +33,16 @@ async def test_a_booking_takes_its_seats_and_charges_per_seat(store: CinemaStore
     assert (await store.get_showtime(evening.id)).seats_left == SEATS_PER_SHOWTIME - 2
 
 
+async def test_a_taken_seat_shows_only_the_first_letter_of_its_name(
+    store: CinemaStore, dune_today: list[Showtime]
+) -> None:
+    evening = dune_today[2]
+    await store.book(request(evening.id, ["D9"]), NOW)
+    seats = {seat.id: seat for row in (await store.seat_map(evening.id)).rows for seat in row.seats}
+    assert (seats["D9"].is_taken, seats["D9"].booked_by) == (True, "R")
+    assert (seats["D10"].is_taken, seats["D10"].booked_by) == (False, None)
+
+
 async def test_a_seat_is_sold_once_and_a_failed_booking_takes_nothing(
     store: CinemaStore, dune_today: list[Showtime]
 ) -> None:

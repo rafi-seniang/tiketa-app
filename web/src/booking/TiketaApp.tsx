@@ -104,6 +104,8 @@ export function TiketaApp() {
         </a>
       </header>
 
+      {route.name === "home" && mcpPath && <AssistantSetup mcpUrl={`${CORE_URL}${mcpPath}/`} />}
+
       <main className="tk-main">
         {route.name === "home" && <HomeScreen agentStatus={agentStatus} ready={chat.ready} onAsk={ask} />}
         {route.name === "film" && <FilmScreen id={route.id} />}
@@ -114,13 +116,14 @@ export function TiketaApp() {
       <footer className="tk-foot">
         <div className="tk-foot-cinema">
           <strong>{cinema.data?.name ?? "Tiketa Cinema"}</strong>
-          <span>Jakarta, times in WIB. Tickets are free in this demo: show your booking code at the counter.</span>
+          <span>
+            Jakarta, times in WIB. A demo cinema: prices show what a ticket would cost, and every ticket is free.
+          </span>
           <span>
             Chat agent {agentStatus === "on" ? "on" : agentStatus === "off" ? "off" : "checking"}, MCP server{" "}
             {meta.data ? (mcpPath ? "on" : "off") : "checking"}
           </span>
         </div>
-        {mcpPath && <AssistantSetup mcpUrl={`${CORE_URL}${mcpPath}/`} />}
       </footer>
 
       <div className="tk-chat-dock" data-open={chatOpen}>
