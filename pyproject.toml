@@ -17,7 +17,7 @@ dependencies = [
     "pillow>=12",
     # Pinned exactly: FastMCP follows a fast-moving protocol and asks for exact pins. A new version is taken on
     # purpose, once it has been public for 14 days.
-    "fastmcp==4.1.4",
+    "fastmcp==4.1.6",
 ]
 
 [project.optional-dependencies]
